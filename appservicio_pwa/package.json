@@ -1,0 +1,9 @@
+{
+  "name": "appservicio-pwa",
+  "version": "1.0.0",
+  "description": "PWA for Kilometros Control",
+  "main": "index.html",
+  "dependencies": {
+    "pg": "^8.11.0"
+  }
+}

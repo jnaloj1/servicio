@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Control de Kilómetros PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <meta name="theme-color" content="#6650a4">
+</head>
+<body>
+    <!-- Pantalla de Login -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-box card">
+            <h2 style="color: var(--primary-color); margin-bottom: 20px;">Control Servicio</h2>
+
+            <div id="loginFormSection">
+                <div class="form-group">
+                    <label>Usuario</label>
+                    <input type="text" id="loginUser" placeholder="Introduce tu usuario">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="loginPass" placeholder="Introduce tu contraseña">
+                </div>
+                <button id="btnLogin" class="btn-primary">Entrar</button>
+                <button id="btnForgotPass" class="btn-secondary-outline" style="border:none; margin-top:5px; font-size: 14px;">¿Olvidaste tu contraseña?</button>
+            </div>
+
+            <!-- Registro (se muestra si el usuario no existe) -->
+            <div id="registerSection" style="display: none;">
+                <p style="font-size: 14px; margin-bottom: 15px;">Parece que eres nuevo. Configura tu recuperación:</p>
+                <div class="form-group">
+                    <label>Pregunta de Seguridad</label>
+                    <input type="text" id="regPregunta" placeholder="Ej: ¿Nombre de tu mascota?">
+                </div>
+                <div class="form-group">
+                    <label>Respuesta</label>
+                    <input type="text" id="regRespuesta" placeholder="Tu respuesta">
+                </div>
+                <button id="btnCompleteRegister" class="btn-primary">Completar Registro</button>
+            </div>
+
+            <!-- Recuperación -->
+            <div id="recoverySection" style="display: none;">
+                <p id="recoveryQuestion" style="font-size: 14px; margin-bottom: 15px; font-weight: 500;"></p>
+                <div class="form-group">
+                    <label>Respuesta</label>
+                    <input type="text" id="recoveryAnswer" placeholder="Tu respuesta">
+                </div>
+                <button id="btnVerifyRecovery" class="btn-primary">Verificar</button>
+                <button id="btnBackToLogin" class="btn-secondary-outline" style="border:none; margin-top:5px;">Volver</button>
+            </div>
+
+            <!-- Nueva Contraseña -->
+            <div id="newPassSection" style="display: none;">
+                <div class="form-group">
+                    <label>Nueva Contraseña</label>
+                    <input type="password" id="newPass" placeholder="Mínimo 4 caracteres">
+                </div>
+                <button id="btnSaveNewPass" class="btn-primary">Guardar Contraseña</button>
+            </div>
+        </div>
+    </div>
+
+    <header id="mainHeader" style="display: none;">
+        <div class="toolbar">
+            <div style="display: flex; align-items: center;">
+                <h1 id="headerTitle">Control Servicio</h1>
+                <div id="syncStatus">
+                    <div class="sync-dot"></div>
+                    <span id="syncText">Iniciando...</span>
+                </div>
+            </div>
+            <div class="actions">
+                <button id="btnList" class="icon-button"><i class="material-icons">list</i></button>
+                <button id="btnPdf" class="icon-button"><i class="material-icons">picture_as_pdf</i></button>
+                <button id="btnStats" class="icon-button"><i class="material-icons">bar_chart</i></button>
+                <button id="btnSettings" class="icon-button"><i class="material-icons">settings</i></button>
+                <button id="btnLogout" class="icon-button"><i class="material-icons">logout</i></button>
+            </div>
+        </div>
+    </header>
+
+    <main id="appContent" style="display: none;">
+        <div id="adminPanel" class="card" style="display: none; background: #e8f5e9; border-bottom: 2px solid #2e7d32; padding: 8px 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-weight: bold; color: #2e7d32;">VISTA ADMIN</span>
+                <select id="adminUserSelect" style="width: auto; padding: 4px; font-size: 12px;"></select>
+            </div>
+        </div>
+        <div id="calendarContainer" class="card">
+            <div id="calendarHeader">
+                <button id="prevMonth" class="icon-button"><i class="material-icons">chevron_left</i></button>
+                <h2 id="currentMonthYear"></h2>
+                <button id="nextMonth" class="icon-button"><i class="material-icons">chevron_right</i></button>
+            </div>
+            <div id="calendarGrid">
+                <div class="weekday">Lun</div><div class="weekday">Mar</div><div class="weekday">Mie</div>
+                <div class="weekday">Jue</div><div class="weekday">Vie</div><div class="weekday">Sab</div><div class="weekday">Dom</div>
+                <!-- Days will be injected here -->
+            </div>
+        </div>
+
+        <div id="summaryCard" class="card">
+            <div class="summary-header">
+                <h3>RESUMEN MENSUAL (<span id="servicesCount">0</span> serv / <span id="descansosCount">0</span> desc)</h3>
+                <div class="total-info" style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                    <div style="display: flex; gap: 12px;">
+                        <p id="totalHours">0h</p>
+                        <p id="totalKm">0 km</p>
+                    </div>
+                    <div style="font-size: 11px; display: flex; gap: 8px; font-weight: 500;">
+                        <span id="reqHours" style="color: var(--secondary-color);"></span>
+                        <span id="diffHours"></span>
+                    </div>
+                </div>
+            </div>
+            <div id="monthlyList" class="monthly-list">
+                <!-- Monthly services will be injected here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Formulario -->
+    <div id="formModal" class="modal">
+        <div class="modal-content full-screen-modal">
+            <div class="modal-header-toolbar">
+                <button id="btnPrevDay" class="icon-button"><i class="material-icons">arrow_back</i></button>
+                <h2 id="modalDateTitle"></h2>
+                <button id="btnNextDay" class="icon-button"><i class="material-icons">arrow_forward</i></button>
+                <span class="close-icon-btn close">&times;</span>
+            </div>
+
+            <div class="form-scroll-container">
+                <h3 id="formSubtitle" style="text-align: center; margin-bottom: 20px;">Nuevo Servicio</h3>
+
+                <form id="servicioForm">
+                    <input type="hidden" id="fId">
+                    <input type="hidden" id="fFecha">
+
+                    <div class="form-group">
+                        <label>Servicio *</label>
+                        <select id="fServicio" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="MAÑANA">MAÑANA</option>
+                            <option value="TARDE">TARDE</option>
+                            <option value="NOCHE">NOCHE</option>
+                            <option value="ENTRANTE NOCHE">ENTRANTE NOCHE</option>
+                            <option value="SALIENTE NOCHE">SALIENTE NOCHE</option>
+                            <option value="OFICINA">OFICINA</option>
+                            <option value="CURSO">CURSO</option>
+                            <option value="DESCANSO SEMANAL">DESCANSO SEMANAL</option>
+                            <option value="DESCANSO SINGULARIZADO">DESCANSO SINGULARIZADO</option>
+                            <option value="DESCANSO FESTIVO">DESCANSO FESTIVO</option>
+                            <option value="DESCANSO COMPENSATORIO">DESCANSO COMPENSATORIO</option>
+                            <option value="DESCANSO NO DEDUCIBLE">DESCANSO NO DEDUCIBLE</option>
+                            <option value="ASUNTOS PARTICULARES">ASUNTOS PARTICULARES</option>
+                            <option value="VACACIONES">VACACIONES</option>
+                            <option value="PERMISO URGENTE">PERMISO URGENTE</option>
+                            <option value="PERMISO NAVIDAD">PERMISO NAVIDAD</option>
+                            <option value="PERMISO S. SANTA">PERMISO S. SANTA</option>
+                            <option value="DESCANSO SUPERACION JORNADA">DESCANSO SUPERACION JORNADA</option>
+                            <option value="PATIO">PATIO</option>
+                            <option value="TIRO">TIRO</option>
+                            <option value="COMISION SERVICIO">COMISION SERVICIO</option>
+                            <option value="BAJA">BAJA</option>
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="form-group">
+                            <label>Horario de inicio</label>
+                            <input type="time" id="fInicio" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Horario de fin</label>
+                            <input type="time" id="fFin" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Vehículo (opcional)</label>
+                        <select id="fVehiculo">
+                            <option value="NINGUNO"> </option>
+                            <option value="COCHE">COCHE</option>
+                            <option value="MOTOCICLETA">MOTOCICLETA</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Distancia (km)</label>
+                        <input type="number" id="fDistancia" placeholder="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Motivo no usar motocicleta (opcional)</label>
+                        <textarea id="fMotivo" class="uppercase" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Observaciones (opcional)</label>
+                        <textarea id="fObservaciones" class="uppercase" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer-actions">
+                <button type="submit" form="servicioForm" class="btn-primary" id="btnSave">Guardar</button>
+                <button type="button" id="btnDeleteForm" class="btn-danger-outline" style="display:none;">Borrar</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Modal Configuración -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Configuración</h2>
+                <span class="close-btn close">&times;</span>
+            </div>
+            <form id="settingsForm">
+                <div class="form-group">
+                    <input type="text" id="sNombre" placeholder="Nombre" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="sApellidos" placeholder="Apellidos" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="sEmpleo" placeholder="Empleo">
+                </div>
+                <div class="form-group">
+                    <input type="text" id="sUnidad" placeholder="Unidad">
+                </div>
+                <div class="form-group">
+                    <input type="text" id="sSubsector" placeholder="Subsector (ej: SUBSECTOR DE TRAFICO DE SEVILLA)">
+                </div>
+                <button type="submit" class="btn-primary">Guardar Configuración</button>
+                <hr style="margin: 20px 0;">
+
+                <div id="autoShiftSection" style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                    <h4 style="margin-top: 0; color: var(--primary-color);">Generar Turno (MMTTNS DDDD)</h4>
+                    <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Introduce el rango de fechas para aplicar el patrón de 10 días.</p>
+                    <div class="row">
+                        <div class="form-group">
+                            <label style="font-size: 12px;">Fecha Inicio</label>
+                            <input type="date" id="shiftStartDate">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 12px;">Fecha Fin</label>
+                            <input type="date" id="shiftEndDate">
+                        </div>
+                    </div>
+                    <button type="button" id="btnApplyShift" class="btn-primary" style="background-color: #2e7d32; width: 100%;">Aplicar Turnos</button>
+                </div>
+
+                <hr style="margin: 10px 0;">
+                <button type="button" id="btnExport" class="btn-primary" style="background-color: var(--secondary-color); margin-top: 10px;">Exportar Datos (Backup)</button>
+                <button type="button" id="btnImport" class="btn-primary" style="background-color: var(--secondary-color); margin-top: 10px;">Importar Datos (Restore)</button>
+                <input type="file" id="importFile" style="display:none" accept=".json">
+                <button type="button" id="btnCancelSettings" class="btn-secondary-outline close">CANCELAR</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal PDF -->
+    <div id="pdfModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Generar PDF</h2>
+                <span class="close-btn close">&times;</span>
+            </div>
+            <p>Seleccione el mes para generar el reporte:</p>
+            <div class="form-group">
+                <input type="month" id="pdfMonth">
+            </div>
+            <button id="btnGeneratePdf" class="btn-primary">Descargar PDF Mensual</button>
+            <button id="btnCancelPdf" class="btn-secondary-outline close">CANCELAR</button>
+        </div>
+    </div>
+
+    <!-- Modal Estadísticas -->
+    <div id="statsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Estadísticas</h2>
+                <span class="close-btn close">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>Seleccionar Año para Gráfico Individual:</label>
+                <select id="statsYearSelect"></select>
+            </div>
+            <button id="btnGenerateStatsPdfSingle" class="btn-primary">Ver Estadística Anual</button>
+
+            <hr style="margin: 10px 0;">
+            <button id="btnOpenCompareModal" class="btn-primary">Comparar Años</button>
+
+            <button id="btnCancelStats" class="btn-secondary-outline close">CANCELAR</button>
+        </div>
+    </div>
+
+    <!-- Modal Comparativa -->
+    <div id="compareModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Comparativa de Años</h2>
+                <span class="close-btn close">&times;</span>
+            </div>
+            <div class="form-group">
+                <label>Seleccione los años que desea comparar:</label>
+                <div id="yearsCheckboxes" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; border: 1px solid var(--secondary-color); padding: 12px; border-radius: 8px; margin-top: 10px;">
+                    <!-- Years will be injected here -->
+                </div>
+            </div>
+            <button id="btnCompareYearsPdf" class="btn-primary">Generar Comparativa</button>
+            <button type="button" id="btnCancelCompare" class="btn-secondary-outline">VOLVER</button>
+        </div>
+    </div>
+
+    <!-- Modal Resumen Anual (Lista) -->
+    <div id="listModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Resumen de Kilómetros</h2>
+                <span class="close-btn close">&times;</span>
+            </div>
+            <div id="annualListContainer" style="max-height: 400px; overflow-y: auto;">
+                <!-- Accordion years will be injected here -->
+            </div>
+            <button id="btnCancelList" class="btn-secondary-outline close" style="margin-top: 20px;">CERRAR</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(reg => {
+                    console.log('SW registrado', reg);
+                }).catch(err => {
+                    console.log('Error SW', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

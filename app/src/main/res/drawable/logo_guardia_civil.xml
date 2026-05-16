@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    
+    <!-- Círculo exterior -->
+    <path
+        android:fillColor="#0B3D91"
+        android:pathData="M100,100m-90,0a90,90 0,1 1,180 0a90,90 0,1 1,-180 0"/>
+    
+    <!-- Círculo interior -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M100,100m-80,0a80,80 0,1 1,160 0a80,80 0,1 1,-160 0"/>
+    
+    <!-- Escudo -->
+    <path
+        android:fillColor="#0B3D91"
+        android:pathData="M100,30L140,70L140,130L100,170L60,130L60,70L100,30Z"/>
+    
+    <!-- Corona -->
+    <path
+        android:fillColor="#0B3D91"
+        android:pathData="M60,70L100,30L140,70L140,130L100,170L60,130L60,70Z"/>
+    
+    <!-- Letras GC -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M85,80L115,80L115,120L85,120L85,80ZM90,85L110,85L110,115L90,115L90,85Z"/>
+</vector> 
