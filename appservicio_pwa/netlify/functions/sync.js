@@ -24,6 +24,9 @@ exports.handler = async (event, context) => {
 
     const client = new Client({
         connectionString: "postgresql://netlifydb_owner:npg_cGID9SlaiBR5@ep-soft-shape-ajb74kav.c-3.us-east-2.db.netlify.com/netlifydb?sslmode=require",
+        ssl: {
+            rejectUnauthorized: false
+        }
     });
 
     try {
@@ -39,7 +42,13 @@ exports.handler = async (event, context) => {
         `);
 
         if (event.httpMethod === 'POST') {
-            const data = event.body;
+            let data;
+            try {
+                data = JSON.parse(event.body);
+            } catch (e) {
+                data = event.body; // Fallback si ya es objeto o string simple
+            }
+
             await client.query(`
                 INSERT INTO user_sync (user_id, data, updated_at)
                 VALUES ($1, $2, CURRENT_TIMESTAMP)
