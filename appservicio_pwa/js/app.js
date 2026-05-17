@@ -235,28 +235,50 @@ function updateSyncUI(status, text) {
     syncText.innerText = text;
 }
 
-async function syncFromServer() {
+async function syncFromServer(isManual = false) {
     try {
+        updateSyncUI('syncing', 'Comprobando nube...');
         const response = await fetch(`/.netlify/functions/sync?userId=${currentUser.username}&t=${Date.now()}`);
-        if (!response.ok) return;
+        if (!response.ok) {
+            if (isManual) alert("No se pudo conectar con la nube");
+            return;
+        }
 
         const data = await response.json();
-        if (!data || (!data.servicios && !data.settings)) return;
+        if (!data || (!data.servicios && !data.settings)) {
+            if (isManual) alert("No hay datos guardados en la nube para este usuario");
+            return;
+        }
 
         const localServices = await obtenerServicios(currentUser.username);
-        if (localServices.length === 0 && data.servicios && data.servicios.length > 0) {
-            if (confirm('Se han encontrado datos en el servidor. ¿Desea restaurarlos en este dispositivo?')) {
+
+        // Si es manual o si el local está vacío pero hay datos en la nube
+        const shouldRestore = isManual || (localServices.length === 0 && data.servicios && data.servicios.length > 0);
+
+        if (shouldRestore) {
+            const mensaje = isManual
+                ? '¿Deseas descargar los datos de la nube? Esto combinará los datos existentes.'
+                : 'Se han encontrado datos en la nube. ¿Deseas restaurarlos en este dispositivo?';
+
+            if (confirm(mensaje)) {
                 if (data.settings) {
                     userSettings = data.settings;
                     await saveUserSettings(currentUser.username);
                     fillSettingsForm();
                 }
-                await importarServiciosBulk(data.servicios, currentUser.username);
+                if (data.servicios) {
+                    await importarServiciosBulk(data.servicios, currentUser.username);
+                }
                 await refreshAppData();
+                updateSyncUI('online', 'Sincronizado');
+                if (isManual) alert("Datos descargados con éxito");
             }
+        } else {
+            updateSyncUI('online', 'Sincronizado');
         }
     } catch (e) {
         console.error("Error al descargar datos del servidor:", e);
+        updateSyncUI('offline', 'Error de red');
     }
 }
 
@@ -564,6 +586,15 @@ function setupEventListeners() {
     btnExport.onclick = () => exportData();
     btnImport.onclick = () => importFile.click();
     importFile.onchange = (e) => importData(e);
+
+    // Cloud Sync Buttons
+    document.getElementById('btnForceDownload').onclick = () => syncFromServer(true);
+    document.getElementById('btnForceUpload').onclick = () => {
+        if (confirm('¿Deseas subir tus datos actuales a la nube? Sobrescribirá la copia anterior.')) {
+            syncToServer();
+            alert("Sincronización de subida iniciada...");
+        }
+    };
 
     // PDF Generation
     btnGeneratePdf.onclick = () => {
