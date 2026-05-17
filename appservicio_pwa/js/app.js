@@ -275,6 +275,7 @@ async function syncFromServer(isManual = false) {
             }
         } else {
             updateSyncUI('online', 'Sincronizado');
+            if (isManual) alert("Tu dispositivo ya está al día con la nube.");
         }
     } catch (e) {
         console.error("Error al descargar datos del servidor:", e);
@@ -588,11 +589,17 @@ function setupEventListeners() {
     importFile.onchange = (e) => importData(e);
 
     // Cloud Sync Buttons
-    document.getElementById('btnForceDownload').onclick = () => syncFromServer(true);
-    document.getElementById('btnForceUpload').onclick = () => {
+    document.getElementById('btnForceDownload').onclick = async () => {
+        await syncFromServer(true);
+        document.getElementById('settingsModal').style.display = "none";
+        renderCalendar();
+    };
+    document.getElementById('btnForceUpload').onclick = async () => {
         if (confirm('¿Deseas subir tus datos actuales a la nube? Sobrescribirá la copia anterior.')) {
-            syncToServer();
-            alert("Sincronización de subida iniciada...");
+            await syncToServer();
+            alert("Datos subidos con éxito a la nube.");
+            document.getElementById('settingsModal').style.display = "none";
+            renderCalendar();
         }
     };
 
