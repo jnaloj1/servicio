@@ -77,6 +77,30 @@ function setupLoginEventListeners() {
         if (result.status === 'success') {
             startApp(result.user);
         } else if (result.status === 'new_user') {
+            // BUSCAR EN LA NUBE SI EL USUARIO YA EXISTE
+            updateSyncUI('syncing', 'Buscando usuario...');
+            try {
+                const response = await fetch(`/.netlify/functions/sync?userId=${user}&t=${Date.now()}`);
+                if (response.ok) {
+                    const cloudData = await response.json();
+                    if (cloudData && cloudData.auth) {
+                        if (cloudData.auth.password === pass) {
+                            // El usuario existe en la nube y la clave coincide
+                            const newUser = await registerUser(user, pass, cloudData.auth.pregunta, cloudData.auth.respuesta);
+                            startApp(newUser);
+                            return;
+                        } else {
+                            alert("Este usuario ya existe en la nube, pero la contraseña es incorrecta.");
+                            updateSyncUI('offline', 'Error Login');
+                            return;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Error al buscar usuario en la nube", e);
+            }
+
+            // Si no existe en la nube, proceder al registro normal
             document.getElementById('loginFormSection').style.display = 'none';
             document.getElementById('registerSection').style.display = 'block';
         } else {
@@ -199,12 +223,12 @@ async function syncToServer() {
     try {
         updateSyncUI('syncing', 'Sincronizando...');
         const allServicios = await obtenerServicios(currentUser.username);
-
-        loadUserSettings(currentUser.username); // Asegurar que tenemos los últimos del storage
+        const authData = await getRecoveryData(currentUser.username);
 
         const data = {
             servicios: allServicios,
             settings: userSettings,
+            auth: authData, // Guardamos la info de acceso para otros dispositivos
             lastUpdated: new Date().toISOString()
         };
 
