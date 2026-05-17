@@ -252,27 +252,27 @@ async function syncFromServer(isManual = false) {
 
         const localServices = await obtenerServicios(currentUser.username);
 
-        // Si es manual o si el local está vacío pero hay datos en la nube
+        // Si es manual, siempre descargamos. Si no, solo si local está vacío para evitar sobrescrituras accidentales.
+        // O mejor, si el usuario quiere que sea automático al login, lo descargamos.
         const shouldRestore = isManual || (localServices.length === 0 && data.servicios && data.servicios.length > 0);
 
         if (shouldRestore) {
-            const mensaje = isManual
-                ? '¿Deseas descargar los datos de la nube? Esto combinará los datos existentes.'
-                : 'Se han encontrado datos en la nube. ¿Deseas restaurarlos en este dispositivo?';
-
-            if (confirm(mensaje)) {
-                if (data.settings) {
-                    userSettings = data.settings;
-                    await saveUserSettings(currentUser.username);
-                    fillSettingsForm();
-                }
-                if (data.servicios) {
-                    await importarServiciosBulk(data.servicios, currentUser.username);
-                }
-                await refreshAppData();
-                updateSyncUI('online', 'Sincronizado');
-                if (isManual) alert("Datos descargados con éxito");
+            // Si no es manual, lo hacemos silenciosamente sin confirm()
+            if (isManual) {
+                if (!confirm('¿Deseas descargar los datos de la nube? Esto combinará los datos existentes.')) return;
             }
+
+            if (data.settings) {
+                userSettings = data.settings;
+                await saveUserSettings(currentUser.username);
+                fillSettingsForm();
+            }
+            if (data.servicios) {
+                await importarServiciosBulk(data.servicios, currentUser.username);
+            }
+            await refreshAppData();
+            updateSyncUI('online', 'Sincronizado');
+            if (isManual) alert("Datos descargados con éxito");
         } else {
             updateSyncUI('online', 'Sincronizado');
             if (isManual) alert("Tu dispositivo ya está al día con la nube.");
