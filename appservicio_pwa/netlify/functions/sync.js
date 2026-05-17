@@ -23,7 +23,7 @@ exports.handler = async (event, context) => {
     }
 
     const client = new Client({
-        connectionString: "postgresql://netlifydb_owner:npg_UsYmL6iAcP5E@ep-raspy-bonus-aj6oe1jj.c-3.us-east-2.db.netlify.com/netlifydb?sslmode=require",
+        connectionString: "postgresql://netlifydb_owner:npg_cGID9SlaiBR5@ep-soft-shape-ajb74kav.c-3.us-east-2.db.netlify.com/netlifydb?sslmode=require",
     });
 
     try {
