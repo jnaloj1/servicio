@@ -218,71 +218,65 @@
 
     <!-- Modal Configuración -->
     <div id="settingsModal" class="modal">
-        <div class="modal-content full-screen-modal">
-            <div class="modal-header-toolbar">
-                <h2 style="flex: 1; text-align: center;">Configuración</h2>
-                <span class="close-icon-btn close">&times;</span>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Configuración</h2>
+                <span class="close-btn close">&times;</span>
             </div>
+            <form id="settingsForm">
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" id="sNombre" placeholder="Nombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Apellidos</label>
+                    <input type="text" id="sApellidos" placeholder="Apellidos" required>
+                </div>
+                <div class="form-group">
+                    <label>Empleo</label>
+                    <input type="text" id="sEmpleo" placeholder="Empleo">
+                </div>
+                <div class="form-group">
+                    <label>Unidad</label>
+                    <input type="text" id="sUnidad" placeholder="Unidad">
+                </div>
+                <div class="form-group">
+                    <label>Subsector</label>
+                    <input type="text" id="sSubsector" placeholder="Subsector (ej: SUBSECTOR DE TRAFICO DE SEVILLA)">
+                </div>
+                <button type="submit" class="btn-primary">Guardar Configuración</button>
 
-            <div class="form-scroll-container">
-                <form id="settingsForm">
-                    <div class="form-group">
-                        <label>Nombre</label>
-                        <input type="text" id="sNombre" placeholder="Nombre" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Apellidos</label>
-                        <input type="text" id="sApellidos" placeholder="Apellidos" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Empleo</label>
-                        <input type="text" id="sEmpleo" placeholder="Empleo">
-                    </div>
-                    <div class="form-group">
-                        <label>Unidad</label>
-                        <input type="text" id="sUnidad" placeholder="Unidad">
-                    </div>
-                    <div class="form-group">
-                        <label>Subsector</label>
-                        <input type="text" id="sSubsector" placeholder="Subsector (ej: SUBSECTOR DE TRAFICO DE SEVILLA)">
-                    </div>
+                <hr style="margin: 20px 0;">
 
-                    <hr style="margin: 20px 0;">
-
-                    <div id="autoShiftSection" style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <h4 style="margin-top: 0; color: var(--primary-color);">Generar Turno (MMM TT NS DDDD)</h4>
-                        <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Introduce el rango de fechas para aplicar el patrón de 10 días.</p>
-                        <div class="row">
-                            <div class="form-group">
-                                <label style="font-size: 12px;">Fecha Inicio</label>
-                                <input type="date" id="shiftStartDate">
-                            </div>
-                            <div class="form-group">
-                                <label style="font-size: 12px;">Fecha Fin</label>
-                                <input type="date" id="shiftEndDate">
-                            </div>
+                <div id="autoShiftSection" style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                    <h4 style="margin-top: 0; color: var(--primary-color);">Generar Turno (MMM TT NS DDDD)</h4>
+                    <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Introduce el rango de fechas para aplicar el patrón de 10 días.</p>
+                    <div class="row">
+                        <div class="form-group">
+                            <label style="font-size: 12px;">Fecha Inicio</label>
+                            <input type="date" id="shiftStartDate">
                         </div>
-                        <button type="button" id="btnApplyShift" class="btn-primary" style="background-color: #2e7d32; width: 100%;">Aplicar Turnos</button>
+                        <div class="form-group">
+                            <label style="font-size: 12px;">Fecha Fin</label>
+                            <input type="date" id="shiftEndDate">
+                        </div>
                     </div>
+                    <button type="button" id="btnApplyShift" class="btn-primary" style="background-color: #2e7d32; width: 100%;">Aplicar Turnos</button>
+                </div>
 
-                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <h4 style="margin-top: 0; color: #1565c0;">Sincronización en la Nube</h4>
-                        <button type="button" id="btnForceDownload" class="btn-primary" style="background-color: #1976d2; width: 100%; margin-bottom: 8px;">Descargar de la Nube</button>
-                        <button type="button" id="btnForceUpload" class="btn-primary" style="background-color: #1976d2; width: 100%;">Subir a la Nube</button>
-                    </div>
+                <hr style="margin: 10px 0;">
+                <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                    <h4 style="margin-top: 0; color: #1565c0;">Sincronización en la Nube</h4>
+                    <button type="button" id="btnForceDownload" class="btn-primary" style="background-color: #1976d2; width: 100%; margin-bottom: 8px;">Descargar de la Nube</button>
+                    <button type="button" id="btnForceUpload" class="btn-primary" style="background-color: #1976d2; width: 100%;">Subir a la Nube</button>
+                </div>
 
-                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
-                        <button type="button" id="btnExport" class="btn-primary" style="background-color: var(--secondary-color);">Exportar Datos (Backup)</button>
-                        <button type="button" id="btnImport" class="btn-primary" style="background-color: var(--secondary-color);">Importar Datos (Restore)</button>
-                        <input type="file" id="importFile" style="display:none" accept=".json">
-                    </div>
-                </form>
-            </div>
-
-            <div class="modal-footer-actions">
-                <button type="submit" form="settingsForm" class="btn-primary">Guardar Configuración</button>
+                <hr style="margin: 10px 0;">
+                <button type="button" id="btnExport" class="btn-primary" style="background-color: var(--secondary-color); margin-top: 10px;">Exportar Datos (Backup)</button>
+                <button type="button" id="btnImport" class="btn-primary" style="background-color: var(--secondary-color); margin-top: 10px;">Importar Datos (Restore)</button>
+                <input type="file" id="importFile" style="display:none" accept=".json">
                 <button type="button" id="btnCancelSettings" class="btn-secondary-outline close">CERRAR</button>
-            </div>
+            </form>
         </div>
     </div>
 
