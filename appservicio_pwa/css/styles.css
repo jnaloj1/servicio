@@ -230,7 +230,7 @@ h1 { font-size: 16px; }
 /* Colores por tipo de servicio - Diferenciación Extrema */
 .service-manana { background-color: #2196F3 !important; color: white !important; }    /* Azul */
 .service-tarde   { background-color: #FFEB3B !important; color: #000 !important; }     /* Amarillo */
-.service-noche   { background-color: #212121 !important; color: white !important; }    /* Negro */
+.service-noche   { background-color: #546E7A !important; color: white !important; }    /* Gris Acero (antes Negro) */
 .service-entrante{ background-color: #9C27B0 !important; color: white !important; }    /* Púrpura */
 .service-saliente{ background-color: #B0BEC5 !important; color: #000 !important; }     /* Gris Claro */
 .service-descanso{ background-color: #4CAF50 !important; color: white !important; }    /* Verde */
@@ -329,7 +329,7 @@ h1 { font-size: 16px; }
     font-weight: 500;
     font-size: 11px;
     margin-right: 8px;
-    color: #555;
+    color: inherit;
     min-width: 45px;
     text-align: right;
 }
