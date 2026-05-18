@@ -227,27 +227,50 @@
                 <span class="close-btn close">&times;</span>
             </div>
             <form id="settingsForm">
-                <div class="form-group">
-                    <label>Nombre</label>
-                    <input type="text" id="sNombre" placeholder="Nombre" required>
+                <details class="year-accordion" style="background: var(--surface); border-radius: 8px; margin-bottom: 15px;">
+                    <summary style="padding: 12px; font-weight: bold; cursor: pointer;">DATOS UNIDAD</summary>
+                    <div style="padding: 12px;">
+                        <div class="form-group">
+                            <label>Nombre</label>
+                            <input type="text" id="sNombre" placeholder="Nombre" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Apellidos</label>
+                            <input type="text" id="sApellidos" placeholder="Apellidos" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Empleo</label>
+                            <input type="text" id="sEmpleo" placeholder="Empleo">
+                        </div>
+                        <div class="form-group">
+                            <label>Unidad</label>
+                            <input type="text" id="sUnidad" placeholder="Unidad">
+                        </div>
+                        <div class="form-group">
+                            <label>Subsector</label>
+                            <input type="text" id="sSubsector" placeholder="Subsector (ej: SUBSECTOR DE TRAFICO DE SEVILLA)">
+                        </div>
+                        <button type="submit" class="btn-primary">Guardar Configuración</button>
+                    </div>
+                </details>
+
+                <hr style="margin: 20px 0;">
+
+                <div id="deleteRangeSection" style="background: #ffebee; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ffcdd2;">
+                    <h4 style="margin-top: 0; color: #c62828;">Eliminar Rango de Fechas</h4>
+                    <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Selecciona las fechas para borrar los datos registrados.</p>
+                    <div class="row">
+                        <div class="form-group">
+                            <label style="font-size: 12px;">Desde</label>
+                            <input type="date" id="deleteStartDate">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 12px;">Hasta</label>
+                            <input type="date" id="deleteEndDate">
+                        </div>
+                    </div>
+                    <button type="button" id="btnDeleteRange" class="btn-danger-outline" style="width: 100%;">Borrar Datos en Rango</button>
                 </div>
-                <div class="form-group">
-                    <label>Apellidos</label>
-                    <input type="text" id="sApellidos" placeholder="Apellidos" required>
-                </div>
-                <div class="form-group">
-                    <label>Empleo</label>
-                    <input type="text" id="sEmpleo" placeholder="Empleo">
-                </div>
-                <div class="form-group">
-                    <label>Unidad</label>
-                    <input type="text" id="sUnidad" placeholder="Unidad">
-                </div>
-                <div class="form-group">
-                    <label>Subsector</label>
-                    <input type="text" id="sSubsector" placeholder="Subsector (ej: SUBSECTOR DE TRAFICO DE SEVILLA)">
-                </div>
-                <button type="submit" class="btn-primary">Guardar Configuración</button>
 
                 <hr style="margin: 20px 0;">
 

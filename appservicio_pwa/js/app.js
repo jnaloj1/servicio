@@ -609,6 +609,48 @@ function setupEventListeners() {
     btnImport.onclick = () => importFile.click();
     importFile.onchange = (e) => importData(e);
 
+    // Delete Range Logic
+    document.getElementById('btnDeleteRange').onclick = async () => {
+        const startStr = document.getElementById('deleteStartDate').value;
+        const endStr = document.getElementById('deleteEndDate').value;
+
+        if (!startStr || !endStr) {
+            alert("Por favor, selecciona ambas fechas.");
+            return;
+        }
+
+        const startDate = new Date(startStr);
+        const endDate = new Date(endStr);
+
+        if (endDate < startDate) {
+            alert("La fecha de fin no puede ser anterior a la de inicio.");
+            return;
+        }
+
+        const totalToDelete = servicios.filter(s => {
+            const [d, m, y] = s.fecha.split('-').map(Number);
+            const sDate = new Date(y, m - 1, d);
+            return sDate >= startDate && sDate <= endDate;
+        });
+
+        if (totalToDelete.length === 0) {
+            alert("No hay registros en el rango seleccionado.");
+            return;
+        }
+
+        if (!confirm(`Se van a eliminar ${totalToDelete.length} registros permanentemente. ¿Continuar?`)) {
+            return;
+        }
+
+        for (const s of totalToDelete) {
+            await eliminarServicio(s.id);
+        }
+
+        await refreshAppData();
+        document.getElementById('settingsModal').style.display = "none";
+        alert(`Se han eliminado ${totalToDelete.length} registros.`);
+    };
+
     // Cloud Sync Buttons
     document.getElementById('btnForceDownload').onclick = async () => {
         await syncFromServer(true);
