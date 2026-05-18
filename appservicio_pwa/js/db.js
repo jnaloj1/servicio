@@ -220,15 +220,6 @@ async function eliminarServicio(id) {
     });
 }
 
-async function obtenerServiciosAdmin() {
-    const database = await ensureDB();
-    return new Promise((resolve) => {
-        const transaction = database.transaction(['servicios'], 'readonly');
-        const store = transaction.objectStore('servicios');
-        store.getAll().onsuccess = (e) => resolve(e.target.result || []);
-    });
-}
-
 async function limpiarServicios(userId) {
     const database = await ensureDB();
     const transaction = database.transaction(['servicios'], 'readwrite');

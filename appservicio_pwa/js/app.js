@@ -19,20 +19,13 @@ async function loadUserSettings(username) {
     if (settings) {
         userSettings = settings;
     } else {
-        // Fallback a localStorage por migración o default
-        const saved = localStorage.getItem(`userSettings_${username}`);
-        if (saved) {
-            userSettings = JSON.parse(saved);
-            await updateUserSettings(username, userSettings); // Migrar a DB
-        } else {
-            userSettings = {
-                nombre: '',
-                apellidos: '',
-                empleo: '',
-                unidad: '',
-                subsector: 'SUBSECTOR DE TRAFICO DE SEVILLA'
-            };
-        }
+        userSettings = {
+            nombre: '',
+            apellidos: '',
+            empleo: '',
+            unidad: '',
+            subsector: 'SUBSECTOR DE TRAFICO DE SEVILLA'
+        };
     }
 }
 
@@ -1558,40 +1551,3 @@ async function importData(event) {
 }
 
 // Nota: La función renderList ha sido eliminada.
-
-// Función para pruebas de estrés (ejecutar desde consola: stressTest(5))
-window.stressTest = async (years = 5) => {
-    console.log(`Generando datos de prueba para ${years} años...`);
-    const testData = [];
-    const today = new Date();
-    const services = ["MAÑANA", "TARDE", "NOCHE", "DESCANSO SEMANAL", "OFICINA"];
-
-    for (let i = 0; i < years * 365; i++) {
-        const d = new Date();
-        d.setDate(today.getDate() - i);
-        const dateStr = formatDate(d);
-
-        if (Math.random() > 0.4) {
-            const sType = services[Math.floor(Math.random() * services.length)];
-            testData.push({
-                fecha: dateStr,
-                servicio: sType,
-                horarioInicio: "08:00",
-                horarioFin: "15:00",
-                vehiculo: sType === "NOCHE" ? "COCHE" : "MOTOCICLETA",
-                distancia: Math.floor(Math.random() * 100) + 10,
-                motivo: "",
-                observaciones: "DATO DE PRUEBA"
-            });
-        }
-    }
-
-    if (confirm(`Se van a importar ${testData.length} registros para ${activeUserId}. ¿Continuar?`)) {
-        // No limpiamos toda la DB, solo los del usuario actual si se quisiera,
-        // pero para el test usaremos el bulk que ya asocia el userId
-        await importarServiciosBulk(testData, activeUserId);
-        await refreshAppData(activeUserId);
-        console.log("Datos de prueba importados con éxito.");
-        alert(`${testData.length} registros generados.`);
-    }
-};
