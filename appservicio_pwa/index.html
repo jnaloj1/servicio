@@ -254,54 +254,60 @@
                     </div>
                 </details>
 
-                <hr style="margin: 20px 0;">
-
-                <div id="deleteRangeSection" style="background: #ffebee; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ffcdd2;">
-                    <h4 style="margin-top: 0; color: #c62828;">Eliminar Rango de Fechas</h4>
-                    <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Selecciona las fechas para borrar los datos registrados.</p>
-                    <div class="row">
-                        <div class="form-group">
-                            <label style="font-size: 12px;">Desde</label>
-                            <input type="date" id="deleteStartDate">
+                <details class="year-accordion" style="background: #ffebee; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ffcdd2;">
+                    <summary style="padding: 12px; font-weight: bold; cursor: pointer; color: #c62828;">ELIMINAR RANGO DE FECHAS</summary>
+                    <div style="padding: 12px;">
+                        <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Selecciona las fechas para borrar los datos registrados.</p>
+                        <div class="row">
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Desde</label>
+                                <input type="date" id="deleteStartDate">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Hasta</label>
+                                <input type="date" id="deleteEndDate">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label style="font-size: 12px;">Hasta</label>
-                            <input type="date" id="deleteEndDate">
-                        </div>
+                        <button type="button" id="btnDeleteRange" class="btn-danger-outline" style="width: 100%;">Borrar Datos en Rango</button>
                     </div>
-                    <button type="button" id="btnDeleteRange" class="btn-danger-outline" style="width: 100%;">Borrar Datos en Rango</button>
-                </div>
+                </details>
 
-                <hr style="margin: 20px 0;">
-
-                <div id="autoShiftSection" style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-                    <h4 style="margin-top: 0; color: var(--primary-color);">Generar Turno (MMM TT NS DDDD)</h4>
-                    <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Introduce el rango de fechas para aplicar el patrón de 10 días.</p>
-                    <div class="row">
-                        <div class="form-group">
-                            <label style="font-size: 12px;">Fecha Inicio</label>
-                            <input type="date" id="shiftStartDate">
+                <details class="year-accordion" style="background: #f0f0f0; border-radius: 8px; margin-bottom: 10px;">
+                    <summary style="padding: 12px; font-weight: bold; cursor: pointer; color: var(--primary-color);">GENERAR TURNO (MMM TT NS DDDD)</summary>
+                    <div style="padding: 12px;">
+                        <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Introduce el rango de fechas para aplicar el patrón de 10 días.</p>
+                        <div class="row">
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Fecha Inicio</label>
+                                <input type="date" id="shiftStartDate">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Fecha Fin</label>
+                                <input type="date" id="shiftEndDate">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label style="font-size: 12px;">Fecha Fin</label>
-                            <input type="date" id="shiftEndDate">
-                        </div>
+                        <button type="button" id="btnApplyShift" class="btn-primary" style="background-color: #2e7d32; width: 100%;">Aplicar Turnos</button>
                     </div>
-                    <button type="button" id="btnApplyShift" class="btn-primary" style="background-color: #2e7d32; width: 100%;">Aplicar Turnos</button>
-                </div>
+                </details>
 
-                <hr style="margin: 10px 0;">
-                <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-                    <h4 style="margin-top: 0; color: #1565c0;">Sincronización en la Nube</h4>
-                    <button type="button" id="btnForceDownload" class="btn-primary" style="background-color: #1976d2; width: 100%; margin-bottom: 8px;">Descargar de la Nube</button>
-                    <button type="button" id="btnForceUpload" class="btn-primary" style="background-color: #1976d2; width: 100%;">Subir a la Nube</button>
-                </div>
+                <details class="year-accordion" style="background: #e3f2fd; border-radius: 8px; margin-bottom: 10px;">
+                    <summary style="padding: 12px; font-weight: bold; cursor: pointer; color: #1565c0;">SINCRONIZACIÓN EN LA NUBE</summary>
+                    <div style="padding: 12px;">
+                        <button type="button" id="btnForceDownload" class="btn-primary" style="background-color: #1976d2; width: 100%; margin-bottom: 8px;">Descargar de la Nube</button>
+                        <button type="button" id="btnForceUpload" class="btn-primary" style="background-color: #1976d2; width: 100%;">Subir a la Nube</button>
+                    </div>
+                </details>
 
-                <hr style="margin: 10px 0;">
-                <button type="button" id="btnExport" class="btn-primary" style="background-color: var(--secondary-color); margin-top: 10px;">Exportar Datos (Backup)</button>
-                <button type="button" id="btnImport" class="btn-primary" style="background-color: var(--secondary-color); margin-top: 10px;">Importar Datos (Restore)</button>
-                <input type="file" id="importFile" style="display:none" accept=".json">
-                <button type="button" id="btnCancelSettings" class="btn-secondary-outline close">CERRAR</button>
+                <details class="year-accordion" style="background: var(--surface); border-radius: 8px; margin-bottom: 15px;">
+                    <summary style="padding: 12px; font-weight: bold; cursor: pointer; color: var(--secondary-color);">COPIAS DE SEGURIDAD (LOCAL)</summary>
+                    <div style="padding: 12px; display: flex; flex-direction: column; gap: 10px;">
+                        <button type="button" id="btnExport" class="btn-primary" style="background-color: var(--secondary-color);">Exportar Datos (Backup)</button>
+                        <button type="button" id="btnImport" class="btn-primary" style="background-color: var(--secondary-color);">Importar Datos (Restore)</button>
+                        <input type="file" id="importFile" style="display:none" accept=".json">
+                    </div>
+                </details>
+
+                <button type="button" id="btnCancelSettings" class="btn-secondary-outline close" style="margin-top: 5px;">CERRAR</button>
             </form>
         </div>
     </div>
