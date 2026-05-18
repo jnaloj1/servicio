@@ -23,7 +23,7 @@ exports.handler = async (event, context) => {
     }
 
     const client = new Client({
-        connectionString: "postgresql://netlifydb_owner:npg_cGID9SlaiBR5@ep-soft-shape-ajb74kav.c-3.us-east-2.db.netlify.com/netlifydb?sslmode=require",
+        connectionString: process.env.DATABASE_URL,
         ssl: {
             rejectUnauthorized: false
         }

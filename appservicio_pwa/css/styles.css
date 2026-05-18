@@ -10,6 +10,28 @@
     --white: #ffffff;
 }
 
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary-color: #d0bcff;
+        --primary-container: #4f378b;
+        --on-primary-container: #eaddff;
+        --secondary-color: #ccc2dc;
+        --background: #141218;
+        --surface: #1d1b20;
+        --on-surface: #e6e1e5;
+        --error: #f2b8b5;
+        --white: #1d1b20;
+    }
+
+    body { background-color: #141218; color: #e6e1e5; }
+    .card, #calendarContainer, #summaryCard { background-color: #1d1b20; border-color: #49454f; }
+    input, textarea, select { background-color: #1d1b20; color: #e6e1e5; border-color: #938f99; }
+    .modal-content { background-color: #2b2930; }
+    .modal-header-toolbar { background-color: #1d1b20; }
+    .year-accordion summary { background-color: #2b2930; }
+    .weekday { color: #d0bcff; }
+}
+
 *, *::before, *::after {
     box-sizing: border-box;
 }

@@ -33,8 +33,8 @@ self.addEventListener('activate', (event) => {
 
 // Fetch Event
 self.addEventListener('fetch', (event) => {
-    // No cachear peticiones de sincronización y añadir bypass de caché
-    if (event.request.url.includes('sync.php')) {
+    // No cachear peticiones de sincronización
+    if (event.request.url.includes('/.netlify/functions/')) {
         return;
     }
 
