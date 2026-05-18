@@ -441,15 +441,15 @@ function setupEventListeners() {
         const hFin = document.getElementById('fFin');
         const vehiculo = document.getElementById('fVehiculo');
 
-        if (servicio === "MAÑANA") {
+        if (servicio === "MAÑANA" || servicio === "MAÑANA RETRIBUIDA") {
             hInicio.value = "06:00";
             hFin.value = "14:00";
             vehiculo.value = "MOTOCICLETA";
-        } else if (servicio === "TARDE") {
+        } else if (servicio === "TARDE" || servicio === "TARDE RETRIBUIDA") {
             hInicio.value = "14:00";
             hFin.value = "22:00";
             vehiculo.value = "MOTOCICLETA";
-        } else if (servicio === "NOCHE" || servicio === "ENTRANTE NOCHE") {
+        } else if (servicio === "NOCHE" || servicio === "ENTRANTE NOCHE" || servicio === "NOCHE RETRIBUIDA") {
             hInicio.value = "22:00";
             hFin.value = "06:00";
             vehiculo.value = "COCHE";
@@ -881,9 +881,9 @@ function renderCalendar() {
 function getServiceClass(serviceName) {
     if (!serviceName) return 'service-otros';
     const serv = serviceName.toUpperCase();
-    if (serv === "MAÑANA") return 'service-manana';
-    if (serv === "TARDE") return 'service-tarde';
-    if (serv === "NOCHE") return 'service-noche';
+    if (serv === "MAÑANA" || serv === "MAÑANA RETRIBUIDA") return 'service-manana';
+    if (serv === "TARDE" || serv === "TARDE RETRIBUIDA") return 'service-tarde';
+    if (serv === "NOCHE" || serv === "NOCHE RETRIBUIDA") return 'service-noche';
     if (serv === "ENTRANTE NOCHE") return 'service-entrante';
     if (serv === "SALIENTE NOCHE") return 'service-saliente';
     if (serv.includes("DESCANSO")) return 'service-descanso';
@@ -921,6 +921,12 @@ function createDayCell(grid, dayNumber, dateStr, isCurrentMonth, todayStr, selec
         const servUpper = (s.servicio || "").toUpperCase();
         if (servUpper === "DESCANSO SINGULARIZADO") {
             initials = "DAS";
+        } else if (servUpper === "MAÑANA RETRIBUIDA") {
+            initials = "MR";
+        } else if (servUpper === "TARDE RETRIBUIDA") {
+            initials = "TR";
+        } else if (servUpper === "NOCHE RETRIBUIDA") {
+            initials = "NR";
         } else {
             // Genérica: primera letra de cada palabra (máx 3)
             initials = s.servicio.split(' ')
