@@ -461,6 +461,10 @@ function setupEventListeners() {
             hInicio.value = "06:00";
             hFin.value = "13:30";
             vehiculo.value = "NINGUNO";
+        } else if (servicio === "OFICINA") {
+            hInicio.value = "07:00";
+            hFin.value = "15:00";
+            vehiculo.value = "NINGUNO";
         } else if (servicio.startsWith("DESCANSO")  || servicio === "DESCANSO NO DEDUCIBLE") {
             hInicio.value = "00:00";
             hFin.value = "00:00";
