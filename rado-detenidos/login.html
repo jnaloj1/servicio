@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - App Detenidos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1a237e;
+            --secondary-color: #1976d2;
+            --bg-color: #f8f9fa;
+        }
+        body {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            font-family: 'Roboto', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+        .brand-logo {
+            font-weight: 800;
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+        .btn-login {
+            width: 100%;
+            height: 55px;
+            border-radius: 12px;
+            background-color: var(--primary-color) !important;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .input-field input:focus + label {
+            color: var(--secondary-color) !important;
+        }
+        .input-field input:focus {
+            border-bottom: 1px solid var(--secondary-color) !important;
+            box-shadow: 0 1px 0 0 var(--secondary-color) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="brand-logo">App Detenidos</div>
+        <form id="login-form">
+            <div class="input-field">
+                <i class="material-icons prefix">person</i>
+                <input id="username" type="text" required>
+                <label for="username">Usuario (Indicativo)</label>
+            </div>
+            <div class="input-field">
+                <i class="material-icons prefix">lock</i>
+                <input id="password" type="password" required>
+                <label for="password">Contraseña</label>
+            </div>
+            <button type="submit" class="btn btn-large btn-login waves-effect waves-light">
+                ENTRAR
+            </button>
+        </form>
+        <div class="center-align" style="margin-top: 15px;">
+            <a href="#modal-recover" class="modal-trigger" style="color: var(--secondary-color); font-size: 0.9rem;">¿Olvidaste tu contraseña?</a>
+        </div>
+        <p class="center-align" style="margin-top: 20px; color: #777; font-size: 0.8rem;">
+            Acceso restringido para personal autorizado
+        </p>
+    </div>
+
+    <!-- Modal Recuperación -->
+    <div id="modal-recover" class="modal" style="border-radius: 16px;">
+        <div class="modal-content">
+            <h4 style="color: var(--primary-color); font-weight: bold;">Recuperar Acceso</h4>
+            <div id="step-1-recover">
+                <p>Introduce tu usuario para validar tu identidad.</p>
+                <div class="input-field">
+                    <input id="recover-username" type="text">
+                    <label for="recover-username">Usuario (Indicativo)</label>
+                </div>
+                <button id="btn-check-user" class="btn waves-effect waves-light blue darken-4">CONTINUAR</button>
+            </div>
+            <div id="step-2-recover" style="display:none;">
+                <p id="question-text" style="font-weight: bold; font-size: 1.1rem; color: #333;"></p>
+                <div class="input-field">
+                    <input id="recover-answer" type="text">
+                    <label for="recover-answer">Tu respuesta</label>
+                </div>
+                <button id="btn-verify-answer" class="btn waves-effect waves-light blue darken-4">VERIFICAR</button>
+            </div>
+            <div id="step-3-recover" style="display:none;">
+                <p>Establece una nueva contraseña:</p>
+                <div class="input-field">
+                    <input id="new-password" type="password">
+                    <label for="new-password">Nueva Contraseña</label>
+                </div>
+                <button id="btn-reset-password" class="btn waves-effect waves-light blue darken-4">CAMBIAR CONTRASEÑA</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Registro (Pregunta Seguridad) -->
+    <div id="modal-register" class="modal" style="border-radius: 16px;" data-backdrop="static">
+        <div class="modal-content">
+            <h4 style="color: var(--primary-color); font-weight: bold;">Configuración de Seguridad</h4>
+            <p>Es tu primer acceso. Configura una pregunta de seguridad para poder recuperar tu cuenta.</p>
+            <div class="input-field">
+                <input id="reg-question" type="text" placeholder="Ej: ¿Nombre de tu primera mascota?">
+                <label for="reg-question">Pregunta de Seguridad</label>
+            </div>
+            <div class="input-field">
+                <input id="reg-answer" type="text">
+                <label for="reg-answer">Respuesta</label>
+            </div>
+            <button id="btn-finish-reg" class="btn waves-effect waves-light blue darken-4">GUARDAR Y ENTRAR</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script type="module">
+        import Dexie from 'https://unpkg.com/dexie/dist/dexie.mjs';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            M.Modal.init(document.querySelectorAll('.modal'));
+        });
+
+        const db = new Dexie('DetenidosDB');
+        db.version(2).stores({
+            detenidos: '++id, userId, fecha, dniNie, matricula, nombreApellidosDetenido',
+            users: 'username, password'
+        });
+
+        let tempUser = null;
+        let tempPass = null;
+
+        document.getElementById('login-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+
+            let userData = await db.users.get(user);
+
+            if (!userData) {
+                // Nuevo usuario: Abrir modal de configuración de seguridad
+                tempUser = user;
+                tempPass = pass;
+                const modalReg = M.Modal.getInstance(document.getElementById('modal-register'));
+                modalReg.open();
+            } else if (userData.password === pass) {
+                sessionStorage.setItem('currentUser', user);
+                location.href = 'records.html';
+            } else {
+                M.toast({html: 'Contraseña incorrecta', classes: 'red rounded'});
+            }
+        };
+
+        // Lógica de Registro Final
+        document.getElementById('btn-finish-reg').onclick = async () => {
+            const question = document.getElementById('reg-question').value;
+            const answer = document.getElementById('reg-answer').value;
+
+            if (!question || !answer) {
+                M.toast({html: 'Completa todos los campos', classes: 'orange'});
+                return;
+            }
+
+            await db.users.add({
+                username: tempUser,
+                password: tempPass,
+                question: question,
+                answer: answer.toLowerCase().trim()
+            });
+
+            sessionStorage.setItem('currentUser', tempUser);
+            location.href = 'records.html';
+        };
+
+        // Lógica de Recuperación
+        let userToRecover = null;
+
+        document.getElementById('btn-check-user').onclick = async () => {
+            const username = document.getElementById('recover-username').value;
+            const user = await db.users.get(username);
+
+            if (user && user.question) {
+                userToRecover = user;
+                document.getElementById('question-text').innerText = user.question;
+                document.getElementById('step-1-recover').style.display = 'none';
+                document.getElementById('step-2-recover').style.display = 'block';
+            } else if (user && !user.question) {
+                M.toast({html: 'Este usuario no tiene configurada la recuperación', classes: 'orange'});
+            } else {
+                M.toast({html: 'Usuario no encontrado', classes: 'red'});
+            }
+        };
+
+        document.getElementById('btn-verify-answer').onclick = () => {
+            const answer = document.getElementById('recover-answer').value.toLowerCase().trim();
+            if (answer === userToRecover.answer) {
+                document.getElementById('step-2-recover').style.display = 'none';
+                document.getElementById('step-3-recover').style.display = 'block';
+            } else {
+                M.toast({html: 'Respuesta incorrecta', classes: 'red'});
+            }
+        };
+
+        document.getElementById('btn-reset-password').onclick = async () => {
+            const newPass = document.getElementById('new-password').value;
+            if (!newPass) return;
+
+            await db.users.update(userToRecover.username, { password: newPass });
+            M.toast({html: 'Contraseña actualizada con éxito', classes: 'green'});
+
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        };
+    </script>
+</body>
+</html>

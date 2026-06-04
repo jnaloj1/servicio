@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>appDrogas - Acceso</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="bg-blue-900 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-sm login-card p-8 rounded-3xl shadow-2xl">
+        <div class="text-center mb-8">
+            <div class="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-shield-alt text-blue-900 text-4xl"></i>
+            </div>
+            <h1 class="text-2xl font-black text-gray-800 uppercase tracking-tight">Acceso Agente</h1>
+            <p class="text-gray-500 text-sm">Identifíquese para continuar</p>
+        </div>
+
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">TIP / Usuario</label>
+                <div class="relative">
+                    <i class="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="username" required class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all uppercase" placeholder="INTRODUZCA SU TIP">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Contraseña</label>
+                <div class="relative">
+                    <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="password" id="password" required class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="••••••••">
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-900 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-blue-800 active:scale-95 transition-all">
+                Entrar al Sistema
+            </button>
+        </form>
+
+        <div class="text-center mt-6">
+            <button onclick="toggleModal('modalPass')" class="text-blue-900 text-[11px] font-bold uppercase tracking-wider hover:underline">
+                ¿Olvidó o desea cambiar su contraseña?
+            </button>
+        </div>
+
+        <p class="mt-8 text-center text-[10px] text-gray-400 uppercase tracking-widest">v.2.0 PWA Secure Access</p>
+    </div>
+
+    <!-- Modal Seguridad -->
+    <div id="modalPass" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-blue-900 p-6 text-white flex justify-between items-center">
+                <h2 class="text-xl font-bold uppercase">Seguridad de Acceso</h2>
+                <button onclick="toggleModal('modalPass')"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="modalContent" class="p-6 space-y-4">
+                <!-- Paso 1: Identificación -->
+                <div id="step1">
+                    <p class="text-xs text-gray-500 mb-4 font-medium">Introduzca su TIP para gestionar su clave.</p>
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Su TIP de Agente</label>
+                    <input type="text" id="changeUser" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none uppercase text-sm focus:ring-2 focus:ring-blue-500">
+                    <button onclick="checkUserStatus()" class="w-full mt-4 bg-blue-900 text-white py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all">
+                        Continuar
+                    </button>
+                    <button onclick="toggleModal('modalPass')" class="w-full mt-2 text-gray-400 py-2 text-[10px] uppercase font-bold tracking-widest hover:underline">
+                        Cancelar
+                    </button>
+                </div>
+
+                <!-- Paso 2: Recuperación/Configuración -->
+                <div id="step2" class="hidden space-y-4">
+                    <div id="recoverySection" class="hidden">
+                        <p id="displayQuestion" class="bg-blue-50 p-3 rounded-lg text-blue-900 text-sm font-bold border-l-4 border-blue-500 mb-4 italic"></p>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Respuesta de Seguridad</label>
+                        <input type="text" id="verifyAnswer" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none text-sm focus:ring-2 focus:ring-blue-500 uppercase">
+                    </div>
+
+                    <div id="setupSection" class="hidden">
+                        <p class="text-xs text-blue-600 mb-4 font-medium italic">Configure su pregunta de seguridad para futuras recuperaciones.</p>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Pregunta de Seguridad</label>
+                        <select id="newQuestion" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none text-sm focus:ring-2 focus:ring-blue-500 mb-2">
+                            <option value="" disabled selected>Seleccione una pregunta...</option>
+                            <option value="¿Cuál es el nombre de su primera mascota?">¿Cuál es el nombre de su primera mascota?</option>
+                            <option value="¿En qué ciudad nació?">¿En qué ciudad nació?</option>
+                            <option value="¿Cuál es el nombre de su escuela primaria?">¿Cuál es el nombre de su escuela primaria?</option>
+                            <option value="¿Cuál es su marca de coche favorita?">¿Cuál es su marca de coche favorita?</option>
+                        </select>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Respuesta</label>
+                        <input type="text" id="newAnswer" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none text-sm focus:ring-2 focus:ring-blue-500 uppercase">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nueva Contraseña</label>
+                        <input type="password" id="newPass" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none text-sm focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <button onclick="finalizePasswordChange()" class="w-full bg-blue-900 text-white py-4 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all">
+                        Confirmar Cambios
+                    </button>
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                        <button onclick="resetModal()" class="w-full text-gray-400 py-2 text-[10px] uppercase font-bold tracking-widest border border-gray-100 rounded-xl hover:bg-gray-50 transition-all">Volver</button>
+                        <button onclick="toggleModal('modalPass')" class="w-full text-red-400 py-2 text-[10px] uppercase font-bold tracking-widest border border-red-50 rounded-xl hover:bg-red-50 transition-all">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleModal(id) {
+            document.getElementById(id).classList.toggle('hidden');
+            if(id === 'modalPass') resetModal();
+        }
+
+        function resetModal() {
+            const modalBtn = document.querySelector('#step2 button');
+            modalBtn.innerText = "Confirmar Cambios";
+            modalBtn.onclick = finalizePasswordChange; // Restaurar función original
+
+            document.getElementById('step1').classList.remove('hidden');
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('recoverySection').classList.add('hidden');
+            document.getElementById('setupSection').classList.add('hidden');
+            document.getElementById('changeUser').value = '';
+            document.getElementById('newPass').value = '';
+            document.getElementById('verifyAnswer').value = '';
+            document.getElementById('newAnswer').value = '';
+            document.getElementById('newQuestion').selectedIndex = 0;
+        }
+
+        function checkUserStatus() {
+            const user = document.getElementById('changeUser').value.trim().toUpperCase();
+            if (!user) return alert('Introduzca su TIP');
+            if (user === 'ADMIN') return alert('El administrador no puede modificar su clave por este medio.');
+
+            const hasPassword = localStorage.getItem('pwd_' + user);
+            const question = localStorage.getItem('q_' + user);
+
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+
+            if (hasPassword && question) {
+                // Modo Recuperación
+                document.getElementById('recoverySection').classList.remove('hidden');
+                document.getElementById('setupSection').classList.add('hidden');
+                document.getElementById('displayQuestion').innerText = "PREGUNTA: " + question;
+            } else {
+                // Modo Configuración Inicial (Registro)
+                document.getElementById('setupSection').classList.remove('hidden');
+                document.getElementById('recoverySection').classList.add('hidden');
+            }
+        }
+
+        async function finalizePasswordChange(isRegistration = false) {
+            const user = document.getElementById('changeUser').value.trim().toUpperCase();
+            const newPass = document.getElementById('newPass').value;
+            const existingQuestion = localStorage.getItem('q_' + user);
+
+            if (!newPass) return alert('Introduzca la contraseña');
+
+            if (existingQuestion && isRegistration !== true) {
+                // Validar respuesta para recuperación (solo si no es registro inicial)
+                const storedAnswer = localStorage.getItem('a_' + user);
+                const providedAnswer = document.getElementById('verifyAnswer').value.trim().toUpperCase();
+                if (providedAnswer !== storedAnswer) {
+                    alert('Respuesta de seguridad incorrecta.');
+                    return;
+                }
+            } else {
+                // Guardar nueva pregunta y respuesta para configuración inicial o registro
+                const nQ = document.getElementById('newQuestion').value;
+                const nA = document.getElementById('newAnswer').value.trim().toUpperCase();
+                if (!nQ || !nA) return alert('Debe configurar la pregunta y respuesta de seguridad.');
+                localStorage.setItem('q_' + user, nQ);
+                localStorage.setItem('a_' + user, nA);
+            }
+
+            localStorage.setItem('pwd_' + user, newPass);
+
+            if (isRegistration === true) {
+                alert('Registro completado correctamente. Bienvenido Agente ' + user);
+                sessionStorage.setItem('appDrogas_User', user);
+                sessionStorage.setItem('appDrogas_Role', 'AGENTE');
+                location.href = 'menu.html';
+            } else {
+                alert('Contraseña actualizada correctamente para el Agente ' + user);
+                toggleModal('modalPass');
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const user = document.getElementById('username').value.trim().toUpperCase();
+            const pass = document.getElementById('password').value;
+
+            // Lógica de administrador
+            if (user === 'ADMIN' && pass === 'admin') {
+                sessionStorage.setItem('appDrogas_User', 'ADMIN');
+                sessionStorage.setItem('appDrogas_Role', 'ADMIN');
+                location.href = 'menu.html';
+                return;
+            }
+
+            const storedPass = localStorage.getItem('pwd_' + user);
+            const hasQuestion = localStorage.getItem('q_' + user);
+
+            if (storedPass && hasQuestion) {
+                if (pass === storedPass) {
+                    sessionStorage.setItem('appDrogas_User', user);
+                    sessionStorage.setItem('appDrogas_Role', 'AGENTE');
+                    location.href = 'menu.html';
+                } else {
+                    alert('Contraseña incorrecta.');
+                }
+            } else {
+                // Registro automático: Si no existe el usuario o le falta la pregunta, obligar a configurar
+                toggleModal('modalPass');
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.remove('hidden');
+                document.getElementById('setupSection').classList.remove('hidden');
+                document.getElementById('recoverySection').classList.add('hidden');
+
+                document.getElementById('changeUser').value = user;
+                document.getElementById('newPass').value = pass;
+
+                const modalBtn = document.querySelector('#step2 button');
+                modalBtn.innerText = "Completar Registro";
+                modalBtn.onclick = () => finalizePasswordChange(true);
+            }
+        });
+
+        // Limpiar sesión al entrar a login
+        sessionStorage.clear();
+    </script>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>appDrogas - Menú Principal</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6 font-sans">
+
+    <header class="w-full max-w-md flex justify-between items-center mb-10">
+        <div class="flex items-center gap-4">
+            <button onclick="window.location.href='/'" class="text-blue-900 p-2 hover:bg-blue-50 rounded-full transition-colors" title="Volver al portal">
+                <i class="fas fa-home text-xl"></i>
+            </button>
+            <h1 class="text-3xl font-black text-gray-800 tracking-tight">APLICACIÓN DROGAS</h1>
+        </div>
+        <button onclick="logout()" class="text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors" title="Cerrar Sesión">
+            <i class="fas fa-sign-out-alt text-xl"></i>
+        </button>
+    </header>
+
+    <div class="w-full max-w-md space-y-6">
+
+        <!-- Info Destacamento (Card) -->
+        <div class="bg-blue-100 border-l-4 border-blue-600 p-4 rounded-xl shadow-sm flex items-center justify-between cursor-pointer active:scale-95 transition-transform" onclick="changeDestacamento()">
+            <div>
+                <span class="text-xs font-bold text-blue-800 uppercase">Control Drogas Dto.</span>
+                <p id="tvDestacamentoActual" class="text-xl font-bold text-blue-900">CARGANDO...</p>
+            </div>
+            <i class="fas fa-cog text-blue-600"></i>
+        </div>
+
+        <!-- Grid de Opciones -->
+        <div class="grid grid-cols-2 gap-4">
+            <!-- Botón Registros -->
+            <button onclick="location.href='registros.html'" class="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center space-y-3 active:scale-95 transition-all border-b-4 border-blue-500">
+                <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
+                    <i class="fas fa-list text-blue-600 text-2xl"></i>
+                </div>
+                <span class="font-bold text-gray-800 text-lg">Registros</span>
+            </button>
+
+            <!-- Botón Backup (Abre modal) -->
+            <button onclick="toggleModal('modalBackup')" class="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center space-y-3 active:scale-95 transition-all border-b-4 border-orange-500">
+                <div class="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center">
+                    <i class="fas fa-cloud-upload-alt text-orange-600 text-2xl"></i>
+                </div>
+                <span class="font-bold text-gray-800 text-lg">Backup</span>
+            </button>
+        </div>
+
+        <!-- Botón Nuevo Registro (Principal) -->
+        <button onclick="location.href='index.html'" class="w-full bg-[#6AD76E] p-6 rounded-2xl shadow-xl flex items-center justify-center space-x-4 active:scale-95 transition-all border-b-4 border-green-700">
+            <i class="fas fa-edit text-2xl text-green-900"></i>
+            <span class="font-black text-green-900 text-xl uppercase">Nuevo Registro</span>
+        </button>
+
+    </div>
+
+    <!-- Modal de Backup -->
+    <div id="modalBackup" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-orange-600 p-6 text-black flex justify-between items-center">
+                <h2 class="text-xl font-bold">Copia de Seguridad</h2>
+                <button onclick="toggleModal('modalBackup')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <button onclick="exportData()" class="w-full flex items-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200">
+                    <i class="fas fa-download text-orange-600 text-xl mr-4"></i>
+                    <div class="text-left">
+                        <p class="font-bold text-gray-800">Descargar Local</p>
+                        <p class="text-xs text-gray-500">Guarda un archivo .json en este dispositivo</p>
+                    </div>
+                </button>
+
+                <button onclick="uploadToServer()" class="w-full flex items-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200">
+                    <i class="fas fa-cloud-upload-alt text-green-600 text-xl mr-4"></i>
+                    <div class="text-left">
+                        <p class="font-bold text-gray-800">Subir al Servidor</p>
+                        <p class="text-xs text-gray-500">Sincroniza los datos con la nube</p>
+                    </div>
+                </button>
+
+                <label class="w-full flex items-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200 cursor-pointer">
+                    <i class="fas fa-upload text-blue-600 text-xl mr-4"></i>
+                    <div class="text-left">
+                        <p class="font-bold text-gray-800">Restaurar Local/Nube</p>
+                        <p class="text-xs text-gray-500">Carga registros desde archivo o servidor</p>
+                    </div>
+                    <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
+                </label>
+
+                <!-- Botón Cancelar / Volver -->
+                <button onclick="toggleModal('modalBackup')" class="w-full flex items-center justify-center p-4 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 transition-colors border border-red-200">
+                    <i class="fas fa-times-circle text-xl mr-4"></i>
+                    <div class="text-left">
+                        <p class="font-bold">Cancelar</p>
+                        <p class="text-xs opacity-75">Volver a la aplicación</p>
+                    </div>
+                </button>
+
+                <p class="text-[10px] text-gray-400 text-center uppercase tracking-widest pt-2">v.2.0 PWA System</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Verificación de sesión y SSO
+        let currentUser = sessionStorage.getItem('appDrogas_User');
+
+        if (!currentUser) {
+            const portalUser = sessionStorage.getItem('loggedUser');
+            if (portalUser) {
+                try {
+                    const userObj = JSON.parse(portalUser);
+                    currentUser = userObj.username;
+                    sessionStorage.setItem('appDrogas_User', currentUser);
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            location.href = '/';
+        }
+
+        const db = new Dexie("appDrogasDB");
+        db.version(1).stores({
+            registros: '++id, fecha, dni, resultado, nombre, matricula'
+        });
+
+        // Configuración Servidor (Cambiar por tu URL real)
+        const SERVER_URL = "https://appdrogas-backup.pwa.com/api/backup";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dest = localStorage.getItem('destacamento_pref') || "NO DEFINIDO";
+            document.getElementById('tvDestacamentoActual').innerText = dest;
+        });
+
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('hidden');
+        }
+
+        function changeDestacamento() {
+            const nuevo = prompt("Introduce el nombre del Destacamento:", document.getElementById('tvDestacamentoActual').innerText);
+            if (nuevo) {
+                localStorage.setItem('destacamento_pref', nuevo);
+                document.getElementById('tvDestacamentoActual').innerText = nuevo;
+            }
+        }
+
+        async function exportData() {
+            try {
+                const data = await db.registros.toArray();
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_drogas_${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                alert("Copia de seguridad descargada correctamente.");
+            } catch (error) {
+                console.error(error);
+                alert("Error al exportar datos.");
+            }
+        }
+
+        async function uploadToServer() {
+            try {
+                const data = await db.registros.toArray();
+                const response = await fetch(SERVER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        destacamento: localStorage.getItem('destacamento_pref'),
+                        fecha: new Date().toISOString(),
+                        registros: data
+                    })
+                });
+
+                if (response.ok) {
+                    alert("¡Sincronización con el servidor exitosa!");
+                } else {
+                    throw new Error("Error en la respuesta del servidor");
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Error al subir al servidor. Verifica la conexión o URL.");
+            }
+        }
+
+        async function downloadFromServer() {
+            if(!confirm("¿Deseas descargar los datos del servidor? Esto sobrescribirá o añadirá datos.")) return;
+
+            try {
+                const response = await fetch(`${SERVER_URL}?destacamento=${localStorage.getItem('destacamento_pref')}`);
+                const data = await response.json();
+                if (data && data.registros) {
+                    await db.registros.bulkPut(data.registros);
+                    alert("Datos restaurados desde el servidor.");
+                    location.reload();
+                }
+            } catch (error) {
+                alert("Error al descargar desde el servidor.");
+            }
+        }
+
+        async function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (confirm(`Se van a importar ${data.length} registros. ¿Deseas continuar?`)) {
+                        await db.registros.bulkPut(data);
+                        alert("Datos restaurados con éxito.");
+                        location.reload();
+                    }
+                } catch (error) {
+                    alert("El archivo no es válido.");
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>

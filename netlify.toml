@@ -1,6 +1,6 @@
 [build]
   command = "npm install"
-  publish = "appservicio_pwa"
+  publish = "."
   functions = "appservicio_pwa/netlify/functions"
 
 [functions]

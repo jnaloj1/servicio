@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Portal de Servicios</title>
+    <link rel="stylesheet" href="appservicio_pwa/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <meta name="theme-color" content="#6650a4">
+    <style>
+        .hub-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            gap: 20px;
+            background-color: var(--background);
+        }
+        .btn-hub {
+            width: 100%;
+            max-width: 320px;
+            padding: 24px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 18px;
+            text-align: left;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .btn-hub:active {
+            transform: scale(0.98);
+        }
+        .btn-hub .material-icons {
+            font-size: 32px;
+        }
+        .hub-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .hub-header img {
+            width: 80px;
+            height: 80px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+        }
+        .logout-link {
+            margin-top: 30px;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Pantalla de Login -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-box card">
+            <img src="appservicio_pwa/icons/icon-512x512.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 20px; border-radius: 16px;">
+            <h2 style="color: var(--primary-color); margin-bottom: 20px;">Acceso Portal</h2>
+
+            <div id="loginFormSection">
+                <div class="form-group">
+                    <label>Usuario</label>
+                    <input type="text" id="loginUser" placeholder="Introduce tu usuario">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="loginPass" placeholder="Introduce tu contraseña">
+                </div>
+                <button id="btnLogin" class="btn-primary">Entrar</button>
+                <button id="btnForgotPass" class="btn-secondary-outline" style="border:none; margin-top:5px; font-size: 14px;">¿Olvidaste tu contraseña?</button>
+            </div>
+
+            <div id="registerSection" style="display: none;">
+                <p style="font-size: 14px; margin-bottom: 15px;">Parece que eres nuevo. Configura tu recuperación:</p>
+                <div class="form-group">
+                    <label>Pregunta de Seguridad</label>
+                    <input type="text" id="regPregunta" placeholder="Ej: ¿Nombre de tu mascota?">
+                </div>
+                <div class="form-group">
+                    <label>Respuesta</label>
+                    <input type="text" id="regRespuesta" placeholder="Tu respuesta">
+                </div>
+                <button id="btnCompleteRegister" class="btn-primary">Completar Registro</button>
+            </div>
+
+            <div id="recoverySection" style="display: none;">
+                <p id="recoveryQuestion" style="font-size: 14px; margin-bottom: 15px; font-weight: 500;"></p>
+                <div class="form-group">
+                    <label>Respuesta</label>
+                    <input type="text" id="recoveryAnswer" placeholder="Tu respuesta">
+                </div>
+                <button id="btnVerifyRecovery" class="btn-primary">Verificar</button>
+                <button id="btnBackToLogin" class="btn-secondary-outline" style="border:none; margin-top:5px;">Volver</button>
+            </div>
+
+            <div id="newPassSection" style="display: none;">
+                <div class="form-group">
+                    <label>Nueva Contraseña</label>
+                    <input type="password" id="newPass" placeholder="Mínimo 4 caracteres">
+                </div>
+                <button id="btnSaveNewPass" class="btn-primary">Guardar Contraseña</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla Principal del Portal -->
+    <div id="hubContainer" class="hub-container">
+        <div class="hub-header">
+            <img src="appservicio_pwa/icons/icon-512x512.png" alt="Logo">
+            <h2 id="welcomeText">Bienvenido</h2>
+            <p style="color: var(--secondary-color);">Selecciona una aplicación</p>
+        </div>
+
+        <button onclick="window.location.href='/appservicio_pwa/'" class="btn-primary btn-hub">
+            <i class="material-icons">directions_car</i>
+            <span>Control Kilómetros</span>
+        </button>
+
+        <button onclick="window.location.href='/rado-detenidos/'" class="btn-primary btn-hub" style="background-color: #2e7d32;">
+            <i class="material-icons">radio</i>
+            <span>Radio Detenidos</span>
+        </button>
+
+        <button onclick="window.location.href='/appDrogas/'" class="btn-primary btn-hub" style="background-color: #1e3a8a;">
+            <i class="material-icons">medication</i>
+            <span>App Drogas</span>
+        </button>
+
+        <div class="logout-link" id="btnLogout">
+            <i class="material-icons">logout</i> Cerrar Sesión
+        </div>
+    </div>
+
+    <script src="appservicio_pwa/js/db.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initDB();
+            checkSession();
+            setupLoginEvents();
+        });
+
+        function checkSession() {
+            const loggedUser = sessionStorage.getItem('loggedUser');
+            if (loggedUser) {
+                const user = JSON.parse(loggedUser);
+                showHub(user);
+            }
+        }
+
+        function showHub(user) {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('hubContainer').style.display = 'flex';
+            document.getElementById('welcomeText').innerText = 'Hola, ' + user.username;
+        }
+
+        function setupLoginEvents() {
+            const btnLogin = document.getElementById('btnLogin');
+            const btnLogout = document.getElementById('btnLogout');
+
+            btnLogin.onclick = async () => {
+                const user = document.getElementById('loginUser').value.trim();
+                const pass = document.getElementById('loginPass').value;
+                if (!user || !pass) return alert("Introduce usuario y contraseña");
+
+                const result = await loginUser(user, pass);
+                if (result.status === 'success') {
+                    sessionStorage.setItem('loggedUser', JSON.stringify(result.user));
+                    showHub(result.user);
+                } else if (result.status === 'new_user') {
+                    document.getElementById('loginFormSection').style.display = 'none';
+                    document.getElementById('registerSection').style.display = 'block';
+                } else {
+                    alert("Contraseña incorrecta");
+                }
+            };
+
+            btnLogout.onclick = () => {
+                sessionStorage.removeItem('loggedUser');
+                location.reload();
+            };
+
+            // Registro rápido para el ejemplo
+            document.getElementById('btnCompleteRegister').onclick = async () => {
+                const user = document.getElementById('loginUser').value.trim();
+                const pass = document.getElementById('loginPass').value;
+                const preg = document.getElementById('regPregunta').value.trim();
+                const resp = document.getElementById('regRespuesta').value.trim();
+                if (!preg || !resp) return alert("Completa la recuperación");
+                const newUser = await registerUser(user, pass, preg, resp);
+                sessionStorage.setItem('loggedUser', JSON.stringify(newUser));
+                showHub(newUser);
+            };
+        }
+    </script>
+</body>
+</html>

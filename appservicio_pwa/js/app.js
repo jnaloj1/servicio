@@ -43,7 +43,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
         await initDB();
-        // El inicio de la app ahora depende del login
+        // Comprobar si ya hay una sesión activa (del portal)
+        const loggedUser = sessionStorage.getItem('loggedUser');
+        if (loggedUser) {
+            startApp(JSON.parse(loggedUser));
+        }
     } catch (e) {
         console.error("Error en la carga inicial:", e);
     }
@@ -450,7 +454,7 @@ function setupEventListeners() {
             hInicio.value = "06:00";
             hFin.value = "06:00";
             vehiculo.value = "NINGUNO";
-        } else if (servicio === "DESCANSO FESTIVO" || servicio === "BAJA"|| servicio === "DESCANSO SINGULARIZADO" || servicio === "VACACIONES" || servicio === "ASUNTOS PARTICULARES" || servicio.startsWith("PERMISO")) {
+        } else if (servicio === "DESCANSO FESTIVO" || servicio === "BAJA"|| servicio === "DESCANSO SINGULARIZADO" || servicio === "VACACIONES" || servicio === "ASUNTOS PARTICULARES" || servicio.startsWith("PERMISO") || servicio === "COMISION SERVICIO") {
             hInicio.value = "06:00";
             hFin.value = "13:30";
             vehiculo.value = "NINGUNO";
@@ -938,6 +942,12 @@ function isConceptoNoLaboral(s) {
            name === "ASUNTOS PARTICULARES" || name.startsWith("PERMISO");
 }
 
+function computaEnFinDeSemana(servicio) {
+    const s = (servicio || "").toUpperCase();
+    const permitidos = ["DESCANSO FESTIVO", "DESCANSO SINGULARIZADO", "ASUNTOS PARTICULARES", "PERMISO POR COMISION"];
+    return permitidos.includes(s);
+}
+
 function createDayCell(grid, dayNumber, dateStr, isCurrentMonth, todayStr, selectedDateStr) {
     const dayDiv = document.createElement('div');
     dayDiv.classList.add('day');
@@ -960,6 +970,8 @@ function createDayCell(grid, dayNumber, dateStr, isCurrentMonth, todayStr, selec
         const servUpper = (s.servicio || "").toUpperCase();
         if (servUpper === "DESCANSO SINGULARIZADO") {
             initials = "DAS";
+        } else if (servUpper === "PERMISO POR COMISION") {
+            initials = "PC";
         } else if (servUpper === "MAÑANA RETRIBUIDA") {
             initials = "MR";
         } else if (servUpper === "TARDE RETRIBUIDA") {
@@ -1050,7 +1062,7 @@ function updateSummary() {
         const [d, m, y] = s.fecha.split('-').map(Number);
         const dayOfWeek = new Date(y, m - 1, d).getDay();
         const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-        if (isWeekend && isConceptoNoLaboral(s)) {
+        if (isWeekend && isConceptoNoLaboral(s) && !computaEnFinDeSemana(s.servicio)) {
             return acc;
         }
 
@@ -1110,8 +1122,8 @@ function updateSummary() {
                     const dayOfWeek = new Date(y, m - 1, d).getDay();
                     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
 
-                    // No sumar minutos si es fin de semana y es un concepto no laboral
-                    if (!(isWeekend && isConceptoNoLaboral(s))) {
+                    // No sumar minutos si es fin de semana y es un concepto no laboral (salvo excepciones)
+                    if (!(isWeekend && isConceptoNoLaboral(s) && !computaEnFinDeSemana(s.servicio))) {
                         const [h1, m1] = s.horarioInicio.split(':').map(Number);
                         const [h2, m2] = s.horarioFin.split(':').map(Number);
                         let start = h1 * 60 + m1;
@@ -1284,7 +1296,7 @@ function generatePDF() {
         const [d, m, y] = s.fecha.split('-').map(Number);
         const dayOfWeek = new Date(y, m - 1, d).getDay();
         const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-        if (isWeekend && isConceptoNoLaboral(s)) return acc;
+        if (isWeekend && isConceptoNoLaboral(s) && !computaEnFinDeSemana(s.servicio)) return acc;
 
         const [h1, m1] = s.horarioInicio.split(':').map(Number);
         const [h2, m2] = s.horarioFin.split(':').map(Number);

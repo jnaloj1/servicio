@@ -1,0 +1,25 @@
+{
+  "name": "App Detenidos - Gestión Oficial",
+  "short_name": "Detenidos",
+  "description": "Sistema de registro de intervenciones y detenidos con generación de informes oficiales.",
+  "start_url": "records.html",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay"],
+  "orientation": "portrait",
+  "background_color": "#1a237e",
+  "theme_color": "#1a237e",
+  "icons": [
+    {
+      "src": "insignia.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "insignia.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

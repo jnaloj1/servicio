@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Detenidos PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1a237e;
+            --secondary-color: #1976d2;
+            --bg-color: #f8f9fa;
+            --card-radius: 16px;
+        }
+        body { background-color: var(--bg-color); font-family: 'Roboto', sans-serif; }
+        .nav-wrapper { background: linear-gradient(135deg, #1a237e 0%, #1976d2 100%); box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .brand-logo { font-weight: 800 !important; letter-spacing: 0.5px; }
+        .collapsible { border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border-radius: var(--card-radius); overflow: hidden; background: white; margin-top: 25px !important; }
+        .collapsible-header { font-weight: 700; color: var(--primary-color); border-bottom: 1px solid #f0f0f0; padding: 18px 20px; display: flex; align-items: center; transition: background 0.3s; }
+        .collapsible-header i { color: var(--secondary-color); margin-right: 15px; }
+        .collapsible-header.active { background-color: #f0f7ff; color: #1565c0; border-bottom: 2px solid var(--secondary-color); }
+        .collapsible-body { border-bottom: none; padding: 30px; }
+        .section-title {
+            background: #f1f3f9;
+            color: var(--primary-color);
+            padding: 12px 15px;
+            font-weight: 800;
+            margin-top: 25px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+        }
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 18px;
+            background: var(--secondary-color);
+            margin-right: 12px;
+            border-radius: 2px;
+        }
+        .input-field { margin-top: 1rem; margin-bottom: 1rem; }
+        .btn-save {
+            width: 100%;
+            margin-top: 35px;
+            margin-bottom: 60px;
+            height: 60px;
+            border-radius: 18px;
+            background-color: #2e7d32 !important;
+            font-weight: 800;
+            letter-spacing: 1px;
+            box-shadow: 0 6px 20px rgba(46, 125, 50, 0.3);
+            transition: all 0.3s;
+        }
+        .btn-save:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(46, 125, 50, 0.4); }
+        .btn-save.orange-mode { background-color: #ef6c00 !important; box-shadow: 0 6px 20px rgba(239, 108, 0, 0.3); }
+
+        .signature-container { background: #fff; border: 2px solid #eaedf2; border-radius: 14px; padding: 8px; transition: border-color 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
+        #signature-pad { width: 100%; height: 220px; touch-action: none; border-radius: 8px; }
+        label { font-size: 0.9rem; font-weight: 500; }
+        input::placeholder { color: #bdbdbd; font-weight: 400; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-wrapper container">
+            <a href="/" class="left"><i class="material-icons">home</i></a>
+            <a href="records.html" class="left" style="margin-left: 15px;"><i class="material-icons">list</i></a>
+            <span class="brand-logo center">Nuevo Registro</span>
+            <ul class="right">
+                <li>
+                    <a class="dropdown-trigger" href="#!" data-target="user-menu-form">
+                        <i class="material-icons left">account_circle</i>
+                        <span id="display-username" class="hide-on-small-only">Usuario</span>
+                        <i class="material-icons right">arrow_drop_down</i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Dropdown Structure -->
+    <ul id="user-menu-form" class="dropdown-content">
+        <li><a href="#!" id="install-app-link" style="display: none;"><i class="material-icons">get_app</i>Instalar App</a></li>
+        <li><a href="#!" onclick="location.reload()"><i class="material-icons">refresh</i>Actualizar</a></li>
+        <li class="divider"></li>
+        <li><a href="#!" id="btn-logout" class="red-text"><i class="material-icons red-text">exit_to_app</i>Cerrar Sesión</a></li>
+    </ul>
+
+    <!-- Indicador de Conexión -->
+    <div id="offline-indicator" class="orange center-align white-text" style="display: none; padding: 5px;">
+        <i class="material-icons tiny">cloud_off</i> Trabajando en modo Offline
+    </div>
+
+    <div class="container" style="margin-top: 20px;">
+        <ul class="collapsible expandable">
+            <!-- 1. INTERVENCIÓN -->
+            <li class="active">
+                <div class="collapsible-header"><i class="material-icons">assignment</i> DATOS INTERVENCIÓN</div>
+                <div class="collapsible-body">
+                    <div class="row">
+                        <div class="input-field col s6"><input type="text" id="etIndicativo1" placeholder="Indicativo 1"></div>
+                        <div class="input-field col s6"><input type="text" id="etIndicativo2" placeholder="Indicativo 2"></div>
+                        <div class="input-field col s12"><input type="text" id="etNumeroPapeleta" placeholder="Nº Papeleta"></div>
+                        <div class="input-field col s6"><input type="date" id="etFecha"><label class="active">Fecha</label></div>
+                        <div class="input-field col s6"><input type="time" id="etHora"><label class="active">Hora</label></div>
+                        <div class="input-field col s12"><input type="text" id="etVia" placeholder="Vía / Calle"></div>
+                        <div class="input-field col s4"><input type="text" id="etKilometro" placeholder="Km"></div>
+                        <div class="input-field col s8"><input type="text" id="etTerminoMunicipal" placeholder="Término Municipal"></div>
+                        <div class="input-field col s12"><input type="text" id="etProvinciaTMunicipal" placeholder="Provincia T.M."></div>
+                        <div class="input-field col s6"><input type="text" id="etPartidoJudicial" placeholder="Partido Judicial"></div>
+                        <div class="input-field col s6"><input type="text" id="etProvinciaPJudicial" placeholder="Provincia P.J."></div>
+                        <div class="input-field col s12"><input type="text" id="etDestacamento" placeholder="Destacamento"></div>
+                    </div>
+                </div>
+            </li>
+
+            <!-- 2. DETENIDO -->
+            <li>
+                <div class="collapsible-header"><i class="material-icons">person</i> DATOS DEL DETENIDO</div>
+                <div class="collapsible-body">
+                    <input type="text" id="etNombreDetenido" placeholder="Nombre y Apellidos">
+                    <input type="text" id="etDniNie" placeholder="DNI / NIE / Pasaporte">
+                    <div class="row">
+                        <div class="input-field col s6"><input type="text" id="etNombrePadre" placeholder="Nombre Padre"></div>
+                        <div class="input-field col s6"><input type="text" id="etNombreMadre" placeholder="Nombre Madre"></div>
+                        <div class="input-field col s6"><input type="text" id="etLugarNacimiento" placeholder="Lugar Nacimiento"></div>
+                        <div class="input-field col s6"><input type="text" id="etProvinciaNacimiento" placeholder="Provincia Nac."></div>
+                        <div class="input-field col s12"><input type="date" id="etFechaNacimiento"><label class="active">Fecha Nacimiento</label></div>
+                    </div>
+                    <div class="section-title">Domicilio</div>
+                    <input type="text" id="etDomicilioDetenido" placeholder="Dirección">
+                    <div class="row">
+                        <div class="input-field col s6"><input type="text" id="etDomicilioLocalidad" placeholder="Localidad"></div>
+                        <div class="input-field col s6"><input type="text" id="etProvinciaDomicilio" placeholder="Provincia"></div>
+                    </div>
+                    <input type="text" id="etTelefono" placeholder="Teléfono de contacto">
+                </div>
+            </li>
+
+            <!-- 3. DELITOS Y TASAS -->
+            <li>
+                <div class="collapsible-header"><i class="material-icons">gavel</i> DELITOS Y TASAS</div>
+                <div class="collapsible-body">
+                    <p><b>Situación Permiso:</b></p>
+                    <p><label><input type="checkbox" id="cbNuncaPermiso"><span>Nunca obtenido</span></label></p>
+                    <p><label><input type="checkbox" id="cbPerdidaVigencia"><span>Pérdida vigencia</span></label></p>
+                    <p><label><input type="checkbox" id="cbRetiradaJudicial"><span>Privación judicial</span></label></p>
+                    <p><label><input type="checkbox" id="cbSeleccionOtroDelito"><span>Otro delito</span></label></p>
+                    <input type="text" id="etOtroDelito" placeholder="Especificar otro delito">
+
+                    <div class="section-title">Tasas Alcohol/Drogas</div>
+                    <p><label><input type="checkbox" id="cbControlPreventivo"><span>Control Preventivo</span></label></p>
+                    <div class="row"><div class="input-field col s6"><input type="text" id="etTasaControl1"></div><div class="input-field col s6"><input type="text" id="etTasaControl2"></div></div>
+
+                    <p><label><input type="checkbox" id="cbAccidente"><span>Accidente</span></label></p>
+                    <div class="row"><div class="input-field col s6"><input type="text" id="etTasaAccidente1"></div><div class="input-field col s6"><input type="text" id="etTasaAccidente2"></div></div>
+
+                    <p><label><input type="checkbox" id="cbInfraccion"><span>Infracción</span></label></p>
+                    <div class="row"><div class="input-field col s6"><input type="text" id="etTasaInfraccion1"></div><div class="input-field col s6"><input type="text" id="etTasaInfraccion2"></div></div>
+
+                    <p><label><input type="checkbox" id="cbSintomas"><span>Síntomas</span></label></p>
+                    <div class="row"><div class="input-field col s6"><input type="text" id="etTasaSintomas1"></div><div class="input-field col s6"><input type="text" id="etTasaSintomas2"></div></div>
+                </div>
+            </li>
+
+            <!-- 4. VEHÍCULO -->
+            <li>
+                <div class="collapsible-header"><i class="material-icons">directions_car</i> VEHÍCULO</div>
+                <div class="collapsible-body">
+                    <input type="text" id="etClaseVehiculo" placeholder="Clase de Vehículo">
+                    <div class="row">
+                        <div class="input-field col s4"><input type="text" id="etMarca" placeholder="Marca"></div>
+                        <div class="input-field col s4"><input type="text" id="etModelo" placeholder="Modelo"></div>
+                        <div class="input-field col s4"><input type="text" id="etMatricula" placeholder="Matrícula"></div>
+                    </div>
+                </div>
+            </li>
+
+            <!-- 5. COOPERADOR -->
+            <li>
+                <div class="collapsible-header"><i class="material-icons">group</i> COOPERADOR</div>
+                <div class="collapsible-body">
+                    <input type="text" id="etNombreCooperador" placeholder="Nombre Completo">
+                    <input type="text" id="etDniNieCooperador" placeholder="DNI / NIE">
+                    <div class="row">
+                        <div class="input-field col s6"><input type="text" id="etNombrePadreCooperador" placeholder="Nombre Padre"></div>
+                        <div class="input-field col s6"><input type="text" id="etNombreMadreCooperador" placeholder="Nombre Madre"></div>
+                        <div class="input-field col s6"><input type="text" id="etLugarNacimientoCooperador" placeholder="Lugar Nac."></div>
+                        <div class="input-field col s6"><input type="text" id="etLocalidadNacimientoCooperador" placeholder="Localidad Nac."></div>
+                        <div class="input-field col s6"><input type="text" id="etProvinciaNacimientoCooperador" placeholder="Provincia Nac."></div>
+                        <div class="input-field col s6"><input type="date" id="etFechaNacimientoCooperador"><label class="active">Fecha Nacimiento</label></div>
+                    </div>
+                    <div class="section-title">Domicilio Cooperador</div>
+                    <input type="text" id="etDomicilioCooperador" placeholder="Dirección">
+                    <div class="row">
+                        <div class="input-field col s6"><input type="text" id="etLocalidadDomicilioCooperador" placeholder="Localidad"></div>
+                        <div class="input-field col s6"><input type="text" id="etProvinciaDomicilioCooperador" placeholder="Provincia"></div>
+                    </div>
+                </div>
+            </li>
+
+            <!-- 6. FIRMA -->
+            <li>
+                <div class="collapsible-header"><i class="material-icons">gesture</i> FIRMA AGENTE</div>
+                <div class="collapsible-body center-align">
+                    <div class="signature-container"><canvas id="signature-pad"></canvas></div>
+                    <button class="btn-flat waves-effect" id="btnClearSignature" style="margin-top:10px">LIMPIAR FIRMA</button>
+                </div>
+            </li>
+        </ul>
+
+        <button class="btn btn-large btn-save waves-effect waves-light" id="btnGuardar">
+            <i class="material-icons left">save</i> GUARDAR TODO
+        </button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>

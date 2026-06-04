@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>appDrogas - Historial</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="js/pdf-generator.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .accordion-active .accordion-content {
+            max-height: 2000px;
+            transition: max-height 0.5s ease-in;
+        }
+        .accordion-active .chevron-icon {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+
+    <header class="bg-blue-900 text-white p-4 shadow-md sticky top-0 z-10 flex items-center">
+        <button onclick="window.location.href='/'" class="mr-2 p-2 hover:bg-blue-800 rounded-full transition-colors" title="Volver al portal">
+            <i class="fas fa-home text-xl"></i>
+        </button>
+        <button onclick="location.href='menu.html'" class="mr-4 p-2 hover:bg-blue-800 rounded-full transition-colors" title="Volver al menú">
+            <i class="fas fa-arrow-left text-xl"></i>
+        </button>
+        <h1 class="text-xl font-bold">Registros Guardados</h1>
+    </header>
+
+    <main class="p-4 max-w-2xl mx-auto">
+        <!-- Buscador -->
+        <div class="mb-4 relative">
+            <input type="text" id="searchInput" oninput="loadRegistros()" placeholder="Buscar por DNI o Matrícula..." class="w-full p-4 pl-12 rounded-xl border-none shadow-sm focus:ring-2 focus:ring-blue-500">
+            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        </div>
+
+        <!-- Acciones de Admin -->
+        <div id="adminActions" class="hidden mb-6 grid grid-cols-2 gap-3">
+            <button onclick="sincronizarServidor()" class="bg-indigo-600 text-white py-3 rounded-xl font-bold text-xs uppercase shadow-md hover:bg-indigo-700 transition-colors">
+                <i class="fas fa-cloud-upload-alt mb-1 block text-lg"></i> Sincronizar Backup
+            </button>
+            <button onclick="exportarDatos()" class="bg-gray-800 text-white py-3 rounded-xl font-bold text-xs uppercase shadow-md hover:bg-gray-900 transition-colors">
+                <i class="fas fa-file-export mb-1 block text-lg"></i> Exportar JSON
+            </button>
+        </div>
+
+
+        <div id="listaRegistros" class="space-y-4">
+            <!-- Los registros se cargarán aquí agrupados por meses -->
+            <p class="text-center text-gray-500 py-10">Cargando registros...</p>
+        </div>
+    </main>
+
+    <!-- Botón Flotante Nuevo Registro -->
+    <button onclick="location.href='index.html'"
+            class="fixed bottom-8 right-8 w-16 h-16 bg-green-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-green-700 active:scale-95 transition-all z-50 focus:outline-none"
+            title="Nuevo Registro">
+        <i class="fas fa-plus text-2xl"></i>
+    </button>
+
+    <script>
+        const db = new Dexie("appDrogasDB");
+        db.version(1).stores({
+            registros: '++id, fecha, dni, resultado, nombre, matricula'
+        });
+
+        const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+        async function loadRegistros() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const container = document.getElementById('listaRegistros');
+            container.innerHTML = '';
+
+            // Verificación de sesión y SSO
+            let currentUser = sessionStorage.getItem('appDrogas_User');
+            let currentRole = sessionStorage.getItem('appDrogas_Role');
+
+            if (!currentUser) {
+                const portalUser = sessionStorage.getItem('loggedUser');
+                if (portalUser) {
+                    try {
+                        const userObj = JSON.parse(portalUser);
+                        currentUser = userObj.username;
+                        sessionStorage.setItem('appDrogas_User', currentUser);
+                        // El rol se mantiene en local o se hereda si el portal lo gestiona
+                    } catch (e) { console.error(e); }
+                }
+            }
+
+            if (!currentUser) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Mostrar acciones de admin si corresponde
+            if (currentRole === 'ADMIN') {
+                document.getElementById('adminActions').classList.remove('hidden');
+            }
+
+            let registros = await db.registros.reverse().toArray();
+
+            // Filtrado por Usuario/Rol
+            if (currentRole !== 'ADMIN') {
+                registros = registros.filter(r => r.agente === currentUser);
+            }
+
+            if (query) {
+                registros = registros.filter(r =>
+                    (r.dni && r.dni.toLowerCase().includes(query)) ||
+                    (r.matricula && r.matricula.toLowerCase().includes(query)) ||
+                    (r.nombre && r.nombre.toLowerCase().includes(query))
+                );
+            }
+
+            if (registros.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-10">No se encontraron registros.</p>';
+                return;
+            }
+
+            // Agrupar por Mes/Año con clave de ordenación
+            const grupos = {};
+            const hoy = new Date();
+            const mesActualKey = `${MESES[hoy.getMonth()]} ${hoy.getFullYear()}`;
+
+            registros.forEach(reg => {
+                const dateObj = new Date(reg.fecha);
+                const mesIndex = dateObj.getMonth();
+                const anio = dateObj.getFullYear();
+
+                const label = `${MESES[mesIndex]} ${anio}`;
+                const sortKey = `${anio}-${(mesIndex + 1).toString().padStart(2, '0')}`;
+
+                if (!grupos[sortKey]) {
+                    grupos[sortKey] = {
+                        label: label,
+                        registros: []
+                    };
+                }
+                grupos[sortKey].registros.push(reg);
+            });
+
+            // Ordenar por fecha (sortKey) descendente: más reciente (mes actual) arriba
+            const sortedKeys = Object.keys(grupos).sort((a, b) => b.localeCompare(a));
+
+            sortedKeys.forEach(key => {
+                const grupo = grupos[key];
+                const isActual = (grupo.label === mesActualKey);
+
+                // Contar positivos y negativos
+                const positivos = grupo.registros.filter(r => r.resultado === 'POSITIVO').length;
+                const negativos = grupo.registros.filter(r => r.resultado === 'NEGATIVO').length;
+
+                const section = document.createElement('div');
+                section.className = `accordion-item bg-gray-200 rounded-xl overflow-hidden mb-4 ${isActual ? 'accordion-active' : ''}`;
+
+                let html = `
+                    <div class="p-4 flex justify-between items-center cursor-pointer select-none" onclick="toggleAccordion(this.parentElement)">
+                        <div class="flex items-center gap-3">
+                            <h2 class="font-bold text-gray-700 uppercase tracking-wider">${grupo.label} (${grupo.registros.length})</h2>
+                            <span class="text-xs font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-md border border-red-100">${positivos} POS</span>
+                            <span class="text-xs font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-md border border-green-100">${negativos} NEG</span>
+                        </div>
+                        <i class="fas fa-chevron-down chevron-icon transition-transform duration-300"></i>
+                    </div>
+                    <div class="accordion-content px-2 pb-2 space-y-3 bg-gray-100">
+                `;
+
+                grupo.registros.forEach(reg => {
+                    let fechaDisplay = reg.fecha;
+                    if (reg.fecha && reg.fecha.includes('-')) {
+                        const parts = reg.fecha.split('-');
+                        fechaDisplay = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+
+                    const sustanciaInfo = reg.resultado === 'POSITIVO'
+                        ? (reg.sustancias || 'POSITIVO SIN ESPECIFICAR')
+                        : 'sin sustancias detectadas';
+
+                    const agenteInfo = currentRole === 'ADMIN'
+                        ? `<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded ml-2 border border-blue-200">AGENTE: ${reg.agente || 'N/A'}</span>`
+                        : '';
+
+                    html += `
+                        <div class="bg-white p-4 rounded-xl shadow-sm border-l-8 ${reg.resultado === 'POSITIVO' ? 'border-red-500' : 'border-green-500'}">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-bold text-gray-400 uppercase">${fechaDisplay} - ${reg.hora}</p>
+                                    <h3 class="font-black text-lg text-gray-800">${reg.nombre} ${agenteInfo}</h3>
+                                    <p class="text-sm text-gray-600">DNI: <span class="font-bold">${reg.dni}</span> | MAT: <span class="font-bold">${reg.matricula}</span></p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xs font-black ${reg.resultado === 'POSITIVO' ? 'text-red-600' : 'text-green-600'} block">${reg.resultado}</span>
+                                    <span class="text-[10px] text-gray-500 italic block mt-1">${sustanciaInfo}</span>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex gap-2 border-t pt-3">
+                                <button onclick="compartirRegistro(${reg.id})" class="flex-1 flex flex-col items-center justify-center text-blue-800 text-[10px] font-bold uppercase py-2 border border-blue-100 rounded-lg bg-blue-50 hover:bg-blue-100">
+                                    <i class="fas fa-share-alt text-lg mb-1"></i> Compartir
+                                </button>
+                                <button onclick="generarInforme(${reg.id})" class="flex-1 flex flex-col items-center justify-center text-green-600 text-[10px] font-bold uppercase py-2 border border-green-100 rounded-lg bg-green-50 hover:bg-green-100">
+                                    <i class="fas fa-file-pdf text-lg mb-1"></i> PDF
+                                </button>
+                                <button onclick="editarRegistro(${reg.id})" class="flex-1 flex flex-col items-center justify-center text-blue-600 text-[10px] font-bold uppercase py-2 border border-blue-50 rounded-lg bg-blue-50 hover:bg-blue-100">
+                                    <i class="fas fa-edit text-lg mb-1"></i> Modificar
+                                </button>
+                                <button onclick="eliminarRegistro(${reg.id})" class="flex-1 flex flex-col items-center justify-center text-red-600 text-[10px] font-bold uppercase py-2 border border-red-50 rounded-lg bg-red-50 hover:bg-red-100">
+                                    <i class="fas fa-trash text-lg mb-1"></i> Borrar
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+                section.innerHTML = html;
+                container.appendChild(section);
+            });
+        }
+
+        function toggleAccordion(el) {
+            el.classList.toggle('accordion-active');
+        }
+
+        function editarRegistro(id) {
+            window.location.href = `index.html?edit=${id}`;
+        }
+
+        async function generarInforme(id) {
+            const reg = await db.registros.get(id);
+            if (reg) {
+                generarPDF(reg);
+            }
+        }
+
+        async function compartirRegistro(id) {
+            const reg = await db.registros.get(id);
+            if (!reg) return;
+
+            try {
+                const { doc, filename } = generarPDFInstance(reg);
+                const pdfBlob = doc.output('blob');
+                const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Informe de Control de Drogas',
+                        text: `Informe de ${reg.nombre} (${reg.dni})`
+                    });
+                } else {
+                    // Fallback si no soporta compartir archivos (ej: PC)
+                    generarPDF(reg);
+                    alert("Tu navegador no soporta compartir archivos directamente. El PDF se ha descargado.");
+                }
+            } catch (err) {
+                console.error("Error al compartir:", err);
+                alert("Error al intentar compartir el archivo.");
+            }
+        }
+
+        async function eliminarRegistro(id) {
+            if (confirm("¿Seguro que quieres borrar este registro?")) {
+                await db.registros.delete(id);
+                loadRegistros();
+            }
+        }
+
+        const SERVER_URL = "https://tu-servidor-produccion.com/api/backup";
+
+        async function sincronizarServidor() {
+            try {
+                const registros = await db.registros.toArray();
+                const response = await fetch(SERVER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        registros,
+                        timestamp: Date.now(),
+                        admin: sessionStorage.getItem('appDrogas_User')
+                    })
+                });
+
+                if (response.ok) {
+                    alert("Sincronización completada con éxito.");
+                } else {
+                    throw new Error("Respuesta del servidor no válida");
+                }
+            } catch (e) {
+                console.error("Error en sincronización:", e);
+                alert("Error al conectar con el servidor de backup. Verifique su conexión.");
+            }
+        }
+
+        async function exportarDatos() {
+            const registros = await db.registros.toArray();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(registros, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "backup_appDrogas_" + new Date().toISOString().slice(0,10) + ".json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        document.addEventListener('DOMContentLoaded', loadRegistros);
+
+        // --- GESTO DE DESLIZAMIENTO (SWIPE) ---
+        let touchstartX = 0;
+        let touchendX = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchstartX = e.changedTouches[0].screenX;
+        }, false);
+
+        document.addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            handleGesture();
+        }, false);
+
+        function handleGesture() {
+            // Si el inicio es mayor que el final + margen, es un desplazamiento a la IZQUIERDA
+            if (touchstartX - touchendX > 100) {
+                console.log('Swipe a la izquierda detectado - Volviendo al menú');
+                location.href = 'menu.html';
+            }
+        }
+    </script>
+</body>
+</html>
