@@ -568,11 +568,12 @@ function renderPDFContent(doc, imgHeader, record, pageWidth, margin, share = fal
     doc.text("Villanueva del Pítamo nº 6 - 41013 SEVILLA", margin, footerY + 3);
     doc.text("Unidad S.I.G.O. 1850", pageWidth - margin, footerY + 3, {align:'right'});
 
-    const fileName = `Detenido_${record.dniNie || 'NR'}.pdf`;
+    const fileName = `Radio detenido ${record.nombreApellidosDetenido ? record.nombreApellidosDetenido.toUpperCase() : "SIN NOMBRE"}`;
+    doc.setProperties({ title: fileName });
 
     if (share && navigator.share) {
         const pdfOutput = doc.output('blob');
-        const file = new File([pdfOutput], fileName, { type: 'application/pdf' });
+        const file = new File([pdfOutput], `${fileName}.pdf`, { type: 'application/pdf' });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             navigator.share({

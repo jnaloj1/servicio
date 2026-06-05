@@ -12,7 +12,7 @@
 </head>
 <body>
     <!-- Pantalla de Login -->
-    <div id="loginOverlay" class="login-overlay">
+    <div id="loginOverlay" class="login-overlay" style="display: none;">
         <div class="login-box card">
             <img src="icons/icon-512x512.png" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 20px; border-radius: 16px;">
             <h2 style="color: var(--primary-color); margin-bottom: 20px;">Control Servicio</h2>
@@ -120,6 +120,12 @@
                     </div>
                 </div>
             </div>
+            <!-- Nueva sección de estadísticas adicionales -->
+            <div id="extraSummaryStats" style="display: flex; justify-content: space-around; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid #ddd; font-size: 12px; font-weight: bold;">
+                <div style="color: #1a237e;"><i class="material-icons" style="font-size: 14px; vertical-align: bottom;">gavel</i> DETENIDOS: <span id="totalDetenidos">0</span></div>
+                <div style="color: #c62828;"><i class="material-icons" style="font-size: 14px; vertical-align: bottom;">medication</i> POSITIVOS: <span id="totalDrogasPos">0</span></div>
+                <div style="color: #2e7d32;"><i class="material-icons" style="font-size: 14px; vertical-align: bottom;">medication</i> NEGATIVOS: <span id="totalDrogasNeg">0</span></div>
+            </div>
             <div id="monthlyList" class="monthly-list">
                 <!-- Monthly services will be injected here -->
             </div>
@@ -138,6 +144,9 @@
 
             <div class="form-scroll-container">
                 <h3 id="formSubtitle" style="text-align: center; margin-bottom: 20px;">Nuevo Servicio</h3>
+
+                <!-- Resumen de Actividad en otras Apps -->
+                <div id="otherAppsSummary" style="margin-bottom: 20px; display: none;"></div>
 
                 <form id="servicioForm">
                     <input type="hidden" id="fId">
@@ -384,6 +393,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="js/db.js"></script>

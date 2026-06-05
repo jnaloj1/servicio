@@ -207,11 +207,19 @@ function generarPDFInstance(data) {
     doc.rect(219, 196, 14, 14);
     doc.rect(219, 213, 14, 14);
 
-    return { doc, filename: `Control_Drogas_${data.dni}_${fechaFmt}.pdf` };
+    const fileName = `Estadistico Drogas ${data.nombre ? data.nombre.toUpperCase() : "SIN NOMBRE"}`;
+    doc.setProperties({ title: fileName });
+    return { doc, filename: `${fileName}.pdf` };
 }
 
 function generarPDF(data) {
-    const { doc, filename } = generarPDFInstance(data);
-    doc.save(filename);
+    const { doc } = generarPDFInstance(data);
+    const nombrePersona = data.nombre ? data.nombre.toUpperCase() : "SIN NOMBRE";
+    doc.setProperties({
+        title: `Estadistico Drogas ${nombrePersona}`
+    });
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
 }
 

@@ -42,120 +42,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.addEventListener('offline', () => updateSyncUI('offline', 'Sin conexión'));
 
     try {
+        console.log("Iniciando App Kilómetros...");
         await initDB();
-        // Comprobar si ya hay una sesión activa (del portal)
+
         const loggedUser = sessionStorage.getItem('loggedUser');
+        console.log("Sesión detectada:", loggedUser);
+
         if (loggedUser) {
             startApp(JSON.parse(loggedUser));
+        } else {
+            console.warn("Sesión no encontrada en sessionStorage. Redirigiendo al portal raíz.");
+            window.location.href = '/index.html';
         }
     } catch (e) {
-        console.error("Error en la carga inicial:", e);
+        console.error("Error crítico en la carga inicial:", e);
     }
 });
 
-// --- Lógica de Autenticación ---
+// --- Lógica de Autenticación (Reducida, ahora gestionada por el portal) ---
 
 function setupLoginEventListeners() {
-    const btnLogin = document.getElementById('btnLogin');
-    const btnForgotPass = document.getElementById('btnForgotPass');
-    const btnCompleteRegister = document.getElementById('btnCompleteRegister');
-    const btnVerifyRecovery = document.getElementById('btnVerifyRecovery');
-    const btnBackToLogin = document.getElementById('btnBackToLogin');
-    const btnSaveNewPass = document.getElementById('btnSaveNewPass');
     const btnLogout = document.getElementById('btnLogout');
     const adminUserSelect = document.getElementById('adminUserSelect');
 
-    btnLogin.onclick = async () => {
-        const user = document.getElementById('loginUser').value.trim();
-        const pass = document.getElementById('loginPass').value;
-        if (!user || !pass) return alert("Introduce usuario y contraseña");
-
-        const result = await loginUser(user, pass);
-        if (result.status === 'success') {
-            startApp(result.user);
-        } else if (result.status === 'new_user') {
-            // BUSCAR EN LA NUBE SI EL USUARIO YA EXISTE
-            updateSyncUI('syncing', 'Buscando usuario...');
-            try {
-                const response = await fetch(`/.netlify/functions/sync?userId=${user}&t=${Date.now()}`);
-                if (response.ok) {
-                    const cloudData = await response.json();
-                    if (cloudData && cloudData.auth) {
-                        if (cloudData.auth.password === pass) {
-                            // El usuario existe en la nube y la clave coincide
-                            const newUser = await registerUser(user, pass, cloudData.auth.pregunta, cloudData.auth.respuesta);
-                            startApp(newUser);
-                            return;
-                        } else {
-                            alert("Este usuario ya existe en la nube, pero la contraseña es incorrecta.");
-                            updateSyncUI('offline', 'Error Login');
-                            return;
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error("Error al buscar usuario en la nube", e);
-            }
-
-            // Si no existe en la nube, proceder al registro normal
-            document.getElementById('loginFormSection').style.display = 'none';
-            document.getElementById('registerSection').style.display = 'block';
-        } else {
-            alert("Contraseña incorrecta");
-        }
-    };
-
-    btnCompleteRegister.onclick = async () => {
-        const user = document.getElementById('loginUser').value.trim();
-        const pass = document.getElementById('loginPass').value;
-        const preg = document.getElementById('regPregunta').value.trim();
-        const resp = document.getElementById('regRespuesta').value.trim();
-
-        if (!preg || !resp) return alert("Completa la recuperación");
-        const newUser = await registerUser(user, pass, preg, resp);
-        startApp(newUser);
-    };
-
-    btnForgotPass.onclick = async () => {
-        const user = document.getElementById('loginUser').value.trim();
-        if (!user) return alert("Introduce tu usuario primero");
-
-        const data = await getRecoveryData(user);
-        if (!data) return alert("Usuario no encontrado");
-
-        document.getElementById('loginFormSection').style.display = 'none';
-        document.getElementById('recoverySection').style.display = 'block';
-        document.getElementById('recoveryQuestion').innerText = data.pregunta;
-    };
-
-    btnVerifyRecovery.onclick = async () => {
-        const user = document.getElementById('loginUser').value.trim();
-        const resp = document.getElementById('recoveryAnswer').value.trim();
-        const data = await getRecoveryData(user);
-
-        if (data.respuesta.toLowerCase() === resp.toLowerCase()) {
-            document.getElementById('recoverySection').style.display = 'none';
-            document.getElementById('newPassSection').style.display = 'block';
-        } else {
-            alert("Respuesta incorrecta");
-        }
-    };
-
-    btnSaveNewPass.onclick = async () => {
-        const user = document.getElementById('loginUser').value.trim();
-        const pass = document.getElementById('newPass').value;
-        if (pass.length < 4) return alert("Contraseña demasiado corta");
-
-        await updateUserPassword(user, pass);
-        alert("Contraseña actualizada. Inicia sesión.");
-        location.reload();
-    };
-
-    btnBackToLogin.onclick = () => location.reload();
-
     btnLogout.onclick = () => {
         sessionStorage.removeItem('loggedUser');
-        location.reload();
+        window.location.href = '/';
     };
 
     adminUserSelect.onchange = async (e) => {
@@ -219,13 +131,33 @@ async function syncToServer() {
 
     try {
         updateSyncUI('syncing', 'Sincronizando...');
+
+        // 1. Recoger datos de Kilómetros
         const allServicios = await obtenerServicios(currentUser.username);
         const authData = await getRecoveryData(currentUser.username);
+
+        // 2. Recoger datos de App Drogas
+        let datosDrogas = [];
+        try {
+            const dbDrogas = new Dexie("appDrogasDB");
+            dbDrogas.version(1).stores({ registros: '++id, fecha, dni, resultado, nombre, matricula' });
+            datosDrogas = await dbDrogas.registros.toArray();
+        } catch(e) { console.warn("No se pudo obtener datos de Drogas para sync", e); }
+
+        // 3. Recoger datos de Radio Detenidos
+        let datosDetenidos = [];
+        try {
+            const dbDetenidos = new Dexie("DetenidosDB");
+            dbDetenidos.version(2).stores({ detenidos: '++id, userId, fecha, dniNie, matricula, nombreApellidosDetenido' });
+            datosDetenidos = await dbDetenidos.detenidos.toArray();
+        } catch(e) { console.warn("No se pudo obtener datos de Detenidos para sync", e); }
 
         const data = {
             servicios: allServicios,
             settings: userSettings,
-            auth: authData, // Guardamos la info de acceso para otros dispositivos
+            auth: authData,
+            drogas: datosDrogas,
+            detenidos: datosDetenidos,
             lastUpdated: new Date().toISOString()
         };
 
@@ -236,7 +168,7 @@ async function syncToServer() {
         });
 
         if (response.ok) {
-            console.log("Sincronización exitosa con el servidor");
+            console.log("Sincronización completa (3 apps) exitosa");
             updateSyncUI('online', 'Sincronizado');
         } else {
             updateSyncUI('offline', 'Error servidor');
@@ -291,9 +223,30 @@ async function syncFromServer(isManual = false) {
             if (data.servicios) {
                 await importarServiciosBulk(data.servicios, currentUser.username);
             }
+
+            // Restaurar datos de Drogas si existen
+            if (data.drogas && data.drogas.length > 0) {
+                try {
+                    const dbDrogas = new Dexie("appDrogasDB");
+                    dbDrogas.version(1).stores({ registros: '++id, fecha, dni, resultado, nombre, matricula' });
+                    await dbDrogas.registros.clear();
+                    await dbDrogas.registros.bulkAdd(data.drogas);
+                } catch(e) { console.error("Error restaurando Drogas", e); }
+            }
+
+            // Restaurar datos de Detenidos si existen
+            if (data.detenidos && data.detenidos.length > 0) {
+                try {
+                    const dbDetenidos = new Dexie("DetenidosDB");
+                    dbDetenidos.version(2).stores({ detenidos: '++id, userId, fecha, dniNie, matricula, nombreApellidosDetenido' });
+                    await dbDetenidos.detenidos.clear();
+                    await dbDetenidos.detenidos.bulkAdd(data.detenidos);
+                } catch(e) { console.error("Error restaurando Detenidos", e); }
+            }
+
             await refreshAppData();
             updateSyncUI('online', 'Sincronizado');
-            if (isManual) alert("Datos descargados con éxito");
+            if (isManual) alert("Datos de las 3 apps descargados con éxito");
         } else {
             updateSyncUI('online', 'Sincronizado');
             if (isManual) alert("Tu dispositivo ya está al día con la nube.");
@@ -301,6 +254,120 @@ async function syncFromServer(isManual = false) {
     } catch (e) {
         console.error("Error al descargar datos del servidor:", e);
         updateSyncUI('offline', 'Error de red');
+    }
+}
+
+async function checkOtherAppsData(dateStr) {
+    const container = document.getElementById('otherAppsSummary');
+    if (!container) return;
+
+    container.innerHTML = '';
+    container.style.display = 'none';
+
+    try {
+        // 1. Consultar App Drogas (Fecha en formato YYYY-MM-DD)
+        const [d, m, y] = dateStr.split('-');
+        const isoDate = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+        const dbDrogas = new Dexie("appDrogasDB");
+        dbDrogas.version(1).stores({ registros: '++id, fecha, dni, resultado, nombre, matricula' });
+        const registrosDrogas = await dbDrogas.registros.where('fecha').equals(isoDate).toArray();
+
+        // 2. Consultar Radio Detenidos (Fecha en timestamp del día)
+        const dbDetenidos = new Dexie("DetenidosDB");
+        dbDetenidos.version(2).stores({ detenidos: '++id, userId, fecha, dniNie, matricula, nombreApellidosDetenido' });
+        const startOfDay = new Date(y, m - 1, d).getTime();
+        const endOfDay = startOfDay + 86399999;
+        const registrosDetenidos = await dbDetenidos.detenidos.where('fecha').between(startOfDay, endOfDay).toArray();
+
+        if (registrosDrogas.length > 0 || registrosDetenidos.length > 0) {
+            container.style.display = 'block';
+            let html = '<div style="background: #f8f9fa; border-radius: 12px; padding: 12px; border: 1px solid #dee2e6; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">';
+            html += '<h4 style="margin:0 0 10px 0; font-size: 11px; color: #6c757d; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Actividad del día:</h4>';
+
+            if (registrosDrogas.length > 0) {
+                html += `<div style="margin-bottom: 10px;"><div style="display: flex; align-items: center; gap: 5px; color: #1e3a8a; font-weight: 700; font-size: 13px; margin-bottom: 4px;"><i class="material-icons" style="font-size: 16px;">medication</i> DROGAS</div>`;
+                registrosDrogas.forEach(r => {
+                    const color = r.resultado === 'POSITIVO' ? '#d32f2f' : '#2e7d32';
+                    html += `<div onclick="window.location.href='/appDrogas/index.html?edit=${r.id}'" style="cursor: pointer; font-size: 12px; margin-left: 5px; padding: 8px 12px; background: white; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                <span style="font-weight: 500;">${r.nombre}</span>
+                                <span style="font-weight: 800; color: ${color}; font-size: 10px; background: ${color}10; padding: 2px 6px; border-radius: 4px;">${r.resultado}</span>
+                             </div>`;
+                });
+                html += '</div>';
+            }
+
+            if (registrosDetenidos.length > 0) {
+                html += `<div><div style="display: flex; align-items: center; gap: 5px; color: #1a237e; font-weight: 700; font-size: 13px; margin-bottom: 4px;"><i class="material-icons" style="font-size: 16px;">gavel</i> DETENIDOS</div>`;
+                registrosDetenidos.forEach(r => {
+                    html += `<div onclick="window.location.href='/rado-detenidos/index.html?edit=${r.id}'" style="cursor: pointer; font-size: 12px; margin-left: 5px; padding: 8px 12px; background: white; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                <span style="font-weight: 500;">${r.nombreApellidosDetenido}</span>
+                                <span style="color: #6c757d; font-size: 10px; font-weight: bold;">${r.dniNie}</span>
+                             </div>`;
+                });
+                html += '</div>';
+            }
+            html += '</div>';
+            container.innerHTML = html;
+        }
+    } catch (e) {
+        console.error("Error al leer bases de datos vinculadas:", e);
+    }
+}
+
+async function checkOtherAppsData(dateStr) {
+    const container = document.getElementById('otherAppsSummary');
+    if (!container) return;
+
+    container.innerHTML = '';
+    container.style.display = 'none';
+
+    try {
+        // 1. Consultar App Drogas (Fecha en formato YYYY-MM-DD)
+        const [d, m, y] = dateStr.split('-');
+        const isoDate = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+        const dbDrogas = new Dexie("appDrogasDB");
+        dbDrogas.version(1).stores({ registros: '++id, fecha, dni, resultado, nombre, matricula' });
+        const registrosDrogas = await dbDrogas.registros.where('fecha').equals(isoDate).toArray();
+
+        // 2. Consultar Radio Detenidos (Fecha en timestamp del día)
+        const dbDetenidos = new Dexie("DetenidosDB");
+        dbDetenidos.version(2).stores({ detenidos: '++id, userId, fecha, dniNie, matricula, nombreApellidosDetenido' });
+        const startOfDay = new Date(y, m - 1, d).getTime();
+        const endOfDay = startOfDay + 86399999;
+        const registrosDetenidos = await dbDetenidos.detenidos.where('fecha').between(startOfDay, endOfDay).toArray();
+
+        if (registrosDrogas.length > 0 || registrosDetenidos.length > 0) {
+            container.style.display = 'block';
+            let html = '<div style="background: #f8f9fa; border-radius: 12px; padding: 12px; border: 1px solid #dee2e6; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">';
+            html += '<h4 style="margin:0 0 10px 0; font-size: 11px; color: #6c757d; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Registros vinculados del día:</h4>';
+
+            if (registrosDrogas.length > 0) {
+                html += `<div style="margin-bottom: 10px;"><div style="display: flex; align-items: center; gap: 5px; color: #1e3a8a; font-weight: 700; font-size: 13px; margin-bottom: 4px;"><i class="material-icons" style="font-size: 16px;">medication</i> DROGAS</div>`;
+                registrosDrogas.forEach(r => {
+                    const color = r.resultado === 'POSITIVO' ? '#d32f2f' : '#2e7d32';
+                    html += `<div onclick="window.location.href='/appDrogas/index.html?edit=${r.id}&pdf=true'" style="cursor: pointer; font-size: 12px; margin-left: 5px; padding: 6px 10px; background: white; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;">
+                                <span>${r.nombre}</span>
+                                <span style="font-weight: bold; color: ${color}; font-size: 10px;">${r.resultado}</span>
+                             </div>`;
+                });
+                html += '</div>';
+            }
+
+            if (registrosDetenidos.length > 0) {
+                html += `<div><div style="display: flex; align-items: center; gap: 5px; color: #1a237e; font-weight: 700; font-size: 13px; margin-bottom: 4px;"><i class="material-icons" style="font-size: 16px;">gavel</i> DETENIDOS</div>`;
+                registrosDetenidos.forEach(r => {
+                    html += `<div onclick="window.location.href='/rado-detenidos/index.html?edit=${r.id}&pdf=true'" style="cursor: pointer; font-size: 12px; margin-left: 5px; padding: 6px 10px; background: white; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;">
+                                <span>${r.nombreApellidosDetenido}</span>
+                                <span style="color: #6c757d; font-size: 10px;">${r.dniNie}</span>
+                             </div>`;
+                });
+                html += '</div>';
+            }
+            html += '</div>';
+            container.innerHTML = html;
+        }
+    } catch (e) {
+        console.warn("Error al leer bases de datos externas:", e);
     }
 }
 
@@ -825,6 +892,9 @@ function actualizarFormParaFechaSeleccionada() {
     const form = document.getElementById('servicioForm');
     const btnSave = document.getElementById('btnSave');
 
+    // Cargar datos vinculados de otras apps
+    checkOtherAppsData(dateStr);
+
     // 1. Limpiar campos antes de cargar (form.reset afecta a inputs dentro del form)
     form.reset();
 
@@ -1010,7 +1080,7 @@ function createDayCell(grid, dayNumber, dateStr, isCurrentMonth, todayStr, selec
 
 // Nota: La función renderList ha sido eliminada por completo para optimizar el código.
 
-function updateSummary() {
+async function updateSummary() {
     const totalKmEl = document.getElementById('totalKm');
     const totalHoursEl = document.getElementById('totalHours');
     const servicesCountEl = document.getElementById('servicesCount');
@@ -1030,8 +1100,42 @@ function updateSummary() {
     }
 
     const period = getAccountingPeriod(currentDate);
-    const startT = period.start.setHours(0,0,0,0);
-    const endT = period.end.setHours(23,59,59,999);
+    const startT = new Date(period.start).setHours(0,0,0,0);
+    const endT = new Date(period.end).setHours(23,59,59,999);
+
+    // --- Cálculo de Estadísticas Adicionales (Otras Apps) ---
+    try {
+        const dbDrogas = new Dexie("appDrogasDB");
+        dbDrogas.version(1).stores({ registros: '++id, fecha, dni, resultado, nombre, matricula' });
+
+        const dbDetenidos = new Dexie("DetenidosDB");
+        dbDetenidos.version(2).stores({ detenidos: '++id, userId, fecha, dniNie, matricula, nombreApellidosDetenido' });
+
+        // Detenidos
+        const resDetenidos = await dbDetenidos.detenidos.where('fecha').between(startT, endT).toArray();
+        const detEl = document.getElementById('totalDetenidos');
+        if (detEl) detEl.innerText = resDetenidos.length;
+
+        // Drogas
+        const allDrogas = await dbDrogas.registros.toArray();
+        const filteredDrogas = allDrogas.filter(r => {
+            if (!r.fecha) return false;
+            const [y, m, d] = r.fecha.split('-').map(Number);
+            const t = new Date(y, m-1, d).getTime();
+            return t >= startT && t <= endT;
+        });
+
+        const pos = filteredDrogas.filter(r => r.resultado === 'POSITIVO').length;
+        const neg = filteredDrogas.filter(r => r.resultado === 'NEGATIVO').length;
+
+        const posEl = document.getElementById('totalDrogasPos');
+        const negEl = document.getElementById('totalDrogasNeg');
+        if (posEl) posEl.innerText = pos;
+        if (negEl) negEl.innerText = neg;
+
+    } catch(e) {
+        console.warn("Error al cargar estadísticas adicionales:", e);
+    }
 
     const filtered = servicios.filter(s => {
         if (!s || !s.fecha) return false;
@@ -1319,7 +1423,9 @@ function generatePDF() {
 
     doc.text(`Firma: ${userSettings.nombre || ''} ${userSettings.apellidos || ''}`, 148, finalY + 25, { align: 'center' });
 
-    doc.save(`kilometros_${selectedMonthStr}.pdf`);
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
 }
 
 function generateStatsPDF(year) {

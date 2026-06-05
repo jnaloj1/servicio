@@ -74,6 +74,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (urlParams.has('edit')) {
         editId = parseInt(urlParams.get('edit'));
         await loadRecordToEdit(editId);
+
+        // Si se solicita PDF automáticamente
+        if (urlParams.get('pdf') === 'true') {
+            const record = await db.detenidos.get(editId);
+            if (record) {
+                setTimeout(() => generatePDF(record), 1000);
+            }
+        }
     }
 });
 
@@ -365,3 +373,190 @@ function updateOnlineStatus() {
 window.addEventListener('online', updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
 updateOnlineStatus();
+
+// --- Lógica de Generación de PDF (Copiada de records.js para soporte SSO/Directo) ---
+
+function generatePDF(record) {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const margin = 20;
+        const pageWidth = 210;
+
+        const imgHeader = new Image();
+        imgHeader.onload = () => {
+            renderPDFContent(doc, imgHeader, record, pageWidth, margin);
+        };
+        imgHeader.onerror = () => alert('Falta membrete.png en la carpeta de la app');
+        imgHeader.src = 'membrete.png';
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function renderPDFContent(doc, imgHeader, record, pageWidth, margin) {
+    doc.addImage(imgHeader, 'PNG', 15, 10, 180, 40);
+    let y = 60;
+    const f = (val) => (val && String(val).trim() !== "") ? String(val) : "______";
+    const ft = (val) => (val && String(val).trim() !== "") ? String(val) + " mg/l" : "______";
+    const fd = (ts) => ts > 0 ? new Date(ts).toLocaleDateString('es-ES') : "______";
+
+    const renderRichParagraph = (doc, segments, x, y, maxWidth) => {
+        let curX = x; let curY = y; const lineHeight = 5.5;
+        segments.forEach(seg => {
+            doc.setFont("helvetica", seg.v ? "bold" : "normal");
+            const words = seg.t.split(/(\s+)/);
+            words.forEach(word => {
+                if (word === "") return;
+                const wordWidth = doc.getTextWidth(word);
+                if (curX + wordWidth > x + maxWidth && word.trim() !== "") { curX = x; curY += lineHeight; }
+                doc.text(word, curX, curY);
+                if (seg.v && word.trim() !== "") { doc.setLineWidth(0.2); doc.line(curX, curY + 0.5, curX + wordWidth, curY + 0.5); }
+                curX += wordWidth;
+            });
+        });
+        return curY + lineHeight;
+    };
+
+    const drawValue = (text, x, currentY) => {
+        doc.setFont("helvetica", "bold"); doc.text(text, x, currentY);
+        const w = doc.getTextWidth(text); doc.setLineWidth(0.3);
+        doc.line(x, currentY + 0.5, x + w, currentY + 0.5);
+        return w;
+    };
+
+    doc.setLineWidth(1); doc.setDrawColor(0);
+    doc.line(margin - 5, y - 4, margin - 5, y + 26);
+    doc.line(margin - 5.5, y - 4, margin - 3, y - 4);
+    doc.line(margin - 4.5, y + 26, margin - 7, y + 26);
+
+    doc.setFontSize(10); doc.setFont("helvetica", "bold");
+    doc.text("O F I C I O", margin, y); y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.text("N/REF: INDICATIVOS ", margin, y);
+    let curX = margin + doc.getTextWidth("N/REF: INDICATIVOS ");
+    curX += drawValue(f(record.indicativo1), curX, y) + 2;
+    doc.text("y", curX, y); curX += 4;
+    curX += drawValue(f(record.indicativo2), curX, y) + 2;
+    doc.text(" NUMERO DE PAPELETA ", curX, y);
+    curX += doc.getTextWidth(" NUMERO DE PAPELETA ");
+    drawValue(f(record.numeroPapeleta), curX, y); y += 6;
+    doc.setFont("helvetica", "bold"); doc.text("S/REF: COTA SEVILLA", margin, y); y += 6;
+    doc.setFont("helvetica", "normal"); doc.text("FECHA: ", margin, y);
+    drawValue(fd(record.fecha), margin + 15, y); y += 6;
+    doc.setFont("helvetica", "bold"); doc.text("ASUNTO: DETENIDO / INVESTIGADO", margin, y); y += 10;
+    doc.setFontSize(11); doc.text("TEXTO", pageWidth / 2, y, { align: 'center' });
+    doc.line((pageWidth/2) - 8, y + 1, (pageWidth/2) + 8, y + 1); y += 10;
+
+    const cuerpoSegments = [
+        { t: "   A las " }, { t: f(record.hora), v: true }, { t: " horas del día " }, { t: fd(record.fecha), v: true },
+        { t: ", a la altura del km. " }, { t: f(record.kilometro), v: true }, { t: ", de la carretera " }, { t: f(record.via), v: true },
+        { t: ", Término Municipal de " }, { t: f(record.terminoMunicipal), v: true }, { t: " (" }, { t: f(record.provinciaTMunicipal), v: true },
+        { t: ") y Judicial de " }, { t: f(record.partidoJudicial), v: true }, { t: " (" }, { t: f(record.provinciaPJudicial), v: true },
+        { t: "), por fuerza del Destacamento de Tráfico de " }, { t: f(record.destacamento), v: true },
+        { t: " se ha procedido a la detención de D. " }, { t: f(record.nombreApellidosDetenido), v: true },
+        { t: " D.n.i./N.i.e. nº " }, { t: f(record.dniNie), v: true }, { t: ", hijo de " }, { t: f(record.nombrePadre), v: true },
+        { t: " y de " }, { t: f(record.nombreMadre), v: true }, { t: ", nacido en " }, { t: f(record.lugarNacimiento), v: true },
+        { t: " (" }, { t: f(record.provinciaNacimiento), v: true }, { t: "), el " }, { t: fd(record.fechaNacimiento), v: true },
+        { t: ", con domicilio en " }, { t: f(record.domicilioDetenido), v: true }, { t: " de la localidad de " }, { t: f(record.domicilioLocalidad), v: true },
+        { t: " (" }, { t: f(record.provinciaDomicilio), v: true }, { t: "), con número de teléfono " }, { t: f(record.telefono), v: true }, { t: "." }
+    ];
+    y = renderRichParagraph(doc, cuerpoSegments, margin, y, 175); y += 2;
+    doc.setFont("helvetica", "bold"); doc.text("POR:", margin, y); y += 6;
+
+    const col1W = 65; const col2W = 105; const tableY = y; const totalWidth = col1W + col2W; const rowH = 8;
+    doc.setLineWidth(0.2); doc.setDrawColor(0); doc.rect(margin, tableY, totalWidth, rowH * 6, 'S');
+    doc.setFillColor(235, 235, 235); doc.rect(margin, tableY, totalWidth, rowH, 'F'); doc.rect(margin, tableY, totalWidth, rowH, 'S');
+    doc.setFontSize(9); doc.setFont("helvetica", "bold");
+    doc.text("CARECER DE PERMISO", margin + col1W/2, tableY + 5.5, {align:'center'});
+    doc.text("ALCOHOLEMIA / DROGAS", margin + col1W + col2W/2, tableY + 5.5, {align:'center'});
+    for(let i = 1; i <= 5; i++) { doc.line(margin, tableY + (rowH * i), margin + totalWidth, tableY + (rowH * i)); }
+    doc.line(margin + col1W, tableY, margin + col1W, tableY + (rowH * 5));
+
+    const drawCB = (x, yCB, label, checked) => {
+        doc.rect(x, yCB - 2.5, 3, 3);
+        if(checked) { doc.line(x, yCB - 2.5, x+3, yCB + 0.5); doc.line(x+3, yCB - 2.5, x, yCB + 0.5); }
+        doc.setFont("helvetica", "normal"); doc.text(label, x + 5, yCB);
+    };
+    const drawValueInTable = (text, x, yV) => {
+        doc.setFont("helvetica", "bold"); doc.text(text, x, yV);
+        const w = doc.getTextWidth(text); doc.setLineWidth(0.2); doc.line(x, yV + 0.4, x + w, yV + 0.4);
+    };
+
+    let curRY = tableY + rowH + 5.5;
+    drawCB(margin + 2, curRY, "No haberlo obtenido nunca", record.nuncaPermiso);
+    doc.text("Control: 1ª tasa: ", margin + col1W + 7, curRY);
+    let offX = doc.getTextWidth("Control: 1ª tasa: "); drawValueInTable(ft(record.tasaControl1), margin + col1W + 7 + offX, curRY);
+    offX += doc.getTextWidth(ft(record.tasaControl1)) + 2; doc.text("/ 2ª tasa: ", margin + col1W + 7 + offX, curRY);
+    offX += doc.getTextWidth("/ 2ª tasa: "); drawValueInTable(ft(record.tasaControl2), margin + col1W + 7 + offX, curRY);
+    drawCB(margin + col1W + 2, curRY, "", record.controlPreventivo);
+
+    curRY += rowH;
+    drawCB(margin + 2, curRY, "P.V. perdida de puntos", record.perdidaVigenciaPuntos);
+    doc.text("Accidente: 1ª tasa: ", margin + col1W + 7, curRY);
+    offX = doc.getTextWidth("Accidente: 1ª tasa: "); drawValueInTable(ft(record.tasaAccidente1), margin + col1W + 7 + offX, curRY);
+    offX += doc.getTextWidth(ft(record.tasaAccidente1)) + 2; doc.text("/ 2ª tasa: ", margin + col1W + 7 + offX, curRY);
+    offX += doc.getTextWidth("/ 2ª tasa: "); drawValueInTable(ft(record.tasaAccidente2), margin + col1W + 7 + offX, curRY);
+    drawCB(margin + col1W + 2, curRY, "", record.accidente);
+
+    curRY += rowH;
+    drawCB(margin + 2, curRY, "Retirado res. Judicial", record.retiradaJudicial);
+    doc.text("Infracción: 1ª tasa: ", margin + col1W + 7, curRY);
+    offX = doc.getTextWidth("Infracción: 1ª tasa: "); drawValueInTable(ft(record.tasaInfraccion1), margin + col1W + 7 + offX, curRY);
+    offX += doc.getTextWidth(ft(record.tasaInfraccion1)) + 2; doc.text("/ 2ª tasa: ", margin + col1W + 7 + offX, curRY);
+    offX += doc.getTextWidth("/ 2ª tasa: "); drawValueInTable(ft(record.tasaInfraccion2), margin + col1W + 7 + offX, curRY);
+    drawCB(margin + col1W + 2, curRY, "", record.infraccion);
+
+    curRY += rowH;
+    drawCB(margin + 2, curRY, "Otro delito", record.seleccionOtroDelito);
+    doc.text("Síntomas: 1ª tasa: ", margin + col1W + 7, curRY);
+    offX = doc.getTextWidth("Síntomas: 1ª tasa: "); drawValueInTable(ft(record.tasaSintomas1), margin + col1W + 7 + offX, curRY);
+    offX += doc.getTextWidth(ft(record.tasaSintomas1)) + 2; doc.text("/ 2ª tasa: ", margin + col1W + 7 + offX, curRY);
+    offX += doc.getTextWidth("/ 2ª tasa: "); drawValueInTable(ft(record.tasaSintomas2), margin + col1W + 7 + offX, curRY);
+    drawCB(margin + col1W + 2, curRY, "", record.sintomas);
+
+    curRY += rowH; doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.text("Otros:", margin + 2, curRY - 1.5);
+    drawValueInTable(f(record.otroDelito), margin + 12, curRY - 1.5); doc.setFontSize(7); doc.setTextColor(80);
+    doc.text("(Velocidad, conducción temeraria, drogas, atentado, resistencia...)", margin + 2, curRY + 2.5); doc.setTextColor(0);
+
+    y = tableY + (rowH * 6) + 8; doc.setFontSize(11);
+    const vehiculoSegments = [
+        { t: "  El cual en el momento de su parada conducía el vehículo clase " }, { t: f(record.claseVehiculo), v: true },
+        { t: " marca " }, { t: f(record.marca), v: true }, { t: " modelo " }, { t: f(record.modelo), v: true },
+        { t: " y matrícula " }, { t: f(record.matricula), v: true }, { t: "." }
+    ];
+    y = renderRichParagraph(doc, vehiculoSegments, margin, y, 175); y += 4;
+    doc.setFont("helvetica", "bold"); doc.text("ANEXO", pageWidth / 2, y, { align: 'center' });
+    doc.line((pageWidth/2) - 8, y + 1, (pageWidth/2) + 8, y + 1); y += 8;
+
+    const anexoSegments = [
+        { t: "  COOPERADOR NECESARIO: " }, { t: f(record.nombreCooperador), v: true },
+        { t: ", D.n.i./N.i.e. nº " }, { t: f(record.dniNieCooperador), v: true },
+        { t: ", hijo de " }, { t: f(record.nombrePadreCooperador), v: true },
+        { t: " y de " }, { t: f(record.nombreMadreCooperador), v: true },
+        { t: ", nacido en " }, { t: f(record.lugarNacimientoCooperador), v: true },
+        { t: " (" }, { t: f(record.provinciaNacimientoCooperador), v: true },
+        { t: "), el " }, { t: fd(record.fechaNacimientoCooperador), v: true },
+        { t: ", con domicilio en C/ " }, { t: f(record.domicilioCooperador), v: true },
+        { t: " de la localidad de " }, { t: f(record.localidadDomicilioCooperador), v: true },
+        { t: " (" }, { t: f(record.provinciaDomicilioCooperador), v: true }, { t: ")." }
+    ];
+    y = renderRichParagraph(doc, anexoSegments, margin, y, 175); y += 6;
+    doc.setFont("helvetica", "normal"); doc.text("  Detenido en libertad con cargos.", margin, y); y += 10;
+    doc.setFont("helvetica", "bold"); doc.text("El Guardia Civil Instructor.", pageWidth / 2, y, { align: 'center' }); y += 2;
+    if (record.firmaAgente && record.firmaAgente.length > 100) { doc.addImage(record.firmaAgente, 'PNG', (pageWidth/2) - 20, y, 40, 15); y += 18; } else { y += 15; }
+
+    const fdoText = `Fdo. `; const nameText = f(record.indicativo1); const fdoW = doc.getTextWidth(fdoText); const nameW = doc.getTextWidth(nameText);
+    const totalW = fdoW + nameW; const startX = (pageWidth / 2) - (totalW / 2);
+    doc.setFont("helvetica", "normal"); doc.text(fdoText, startX, y); doc.setFont("helvetica", "bold"); doc.text(nameText, startX + fdoW, y);
+    doc.setLineWidth(0.2); doc.line(startX + fdoW, y + 0.5, startX + fdoW + nameW, y + 0.5);
+
+    const nombrePersona = record.nombreApellidosDetenido ? record.nombreApellidosDetenido.toUpperCase() : "SIN NOMBRE";
+    doc.setProperties({
+        title: `Radio detenido ${nombrePersona}`
+    });
+
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+}

@@ -121,39 +121,54 @@
             <p style="color: var(--secondary-color);">Selecciona una aplicación</p>
         </div>
 
-        <button onclick="window.location.href='/appservicio_pwa/'" class="btn-primary btn-hub">
+        <a href="appservicio_pwa/index.html" class="btn-primary btn-hub" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
             <i class="material-icons">directions_car</i>
-            <span>Control Kilómetros</span>
-        </button>
+            <span style="margin-left: 10px;">Control Kilómetros</span>
+        </a>
 
-        <button onclick="window.location.href='/rado-detenidos/'" class="btn-primary btn-hub" style="background-color: #2e7d32;">
+        <a href="rado-detenidos/index.html" class="btn-primary btn-hub" style="background-color: #2e7d32; text-decoration: none; display: flex; align-items: center; justify-content: center;">
             <i class="material-icons">radio</i>
-            <span>Radio Detenidos</span>
-        </button>
+            <span style="margin-left: 10px;">Radio Detenidos</span>
+        </a>
 
-        <button onclick="window.location.href='/appDrogas/'" class="btn-primary btn-hub" style="background-color: #1e3a8a;">
+        <a href="appDrogas/index.html" class="btn-primary btn-hub" style="background-color: #1e3a8a; text-decoration: none; display: flex; align-items: center; justify-content: center;">
             <i class="material-icons">medication</i>
-            <span>App Drogas</span>
-        </button>
+            <span style="margin-left: 10px;">App Drogas</span>
+        </a>
 
         <div class="logout-link" id="btnLogout">
             <i class="material-icons">logout</i> Cerrar Sesión
+        </div>
+
+        <!-- Debug Info -->
+        <div id="debugInfo" style="margin-top: 40px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #eee; pt-10">
+            Cargando diagnóstico...
         </div>
     </div>
 
     <script src="appservicio_pwa/js/db.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            await initDB();
-            checkSession();
-            setupLoginEvents();
+            const debug = document.getElementById('debugInfo');
+            try {
+                await initDB();
+                debug.innerHTML = 'DB: OK | ';
+                checkSession();
+                setupLoginEvents();
+                const session = sessionStorage.getItem('loggedUser');
+                debug.innerHTML += session ? 'Sesión: Activa' : 'Sesión: No iniciada';
+            } catch (e) {
+                debug.innerHTML = 'Error inicialización: ' + e.message;
+            }
         });
 
         function checkSession() {
             const loggedUser = sessionStorage.getItem('loggedUser');
             if (loggedUser) {
-                const user = JSON.parse(loggedUser);
-                showHub(user);
+                try {
+                    const user = JSON.parse(loggedUser);
+                    showHub(user);
+                } catch (e) { console.error("Sesión corrupta", e); }
             }
         }
 
@@ -172,21 +187,28 @@
                 const pass = document.getElementById('loginPass').value;
                 if (!user || !pass) return alert("Introduce usuario y contraseña");
 
-                const result = await loginUser(user, pass);
-                if (result.status === 'success') {
-                    sessionStorage.setItem('loggedUser', JSON.stringify(result.user));
-                    showHub(result.user);
-                } else if (result.status === 'new_user') {
-                    document.getElementById('loginFormSection').style.display = 'none';
-                    document.getElementById('registerSection').style.display = 'block';
-                } else {
-                    alert("Contraseña incorrecta");
+                try {
+                    const result = await loginUser(user, pass);
+                    console.log('Resultado login portal:', result);
+                    if (result.status === 'success') {
+                        console.log('Guardando sesión para:', result.user.username);
+                        sessionStorage.setItem('loggedUser', JSON.stringify(result.user));
+                        showHub(result.user);
+                        location.reload(); // Recargar para asegurar que todo el sistema ve la sesión
+                    } else if (result.status === 'new_user') {
+                        document.getElementById('loginFormSection').style.display = 'none';
+                        document.getElementById('registerSection').style.display = 'block';
+                    } else {
+                        alert("Contraseña incorrecta");
+                    }
+                } catch (e) {
+                    alert("Error al conectar con la base de datos");
                 }
             };
 
             btnLogout.onclick = () => {
                 sessionStorage.removeItem('loggedUser');
-                location.reload();
+                location.href = '/';
             };
 
             // Registro rápido para el ejemplo
@@ -199,6 +221,7 @@
                 const newUser = await registerUser(user, pass, preg, resp);
                 sessionStorage.setItem('loggedUser', JSON.stringify(newUser));
                 showHub(newUser);
+                location.reload();
             };
         }
     </script>

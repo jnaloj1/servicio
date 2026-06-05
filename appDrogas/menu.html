@@ -77,19 +77,27 @@
                     </div>
                 </button>
 
-                <button onclick="uploadToServer()" class="w-full flex items-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200">
+                <button onclick="syncGlobal()" class="w-full flex items-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200">
                     <i class="fas fa-cloud-upload-alt text-green-600 text-xl mr-4"></i>
                     <div class="text-left">
-                        <p class="font-bold text-gray-800">Subir al Servidor</p>
-                        <p class="text-xs text-gray-500">Sincroniza los datos con la nube</p>
+                        <p class="font-bold text-gray-800">Sincronización Total (Nube)</p>
+                        <p class="text-xs text-gray-500">Sincroniza todas las aplicaciones del portal</p>
+                    </div>
+                </button>
+
+                <button onclick="downloadFromServer()" class="w-full flex items-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200">
+                    <i class="fas fa-download text-blue-600 text-xl mr-4"></i>
+                    <div class="text-left">
+                        <p class="font-bold text-gray-800">Descargar de la Nube</p>
+                        <p class="text-xs text-gray-500">Recupera tus registros guardados</p>
                     </div>
                 </button>
 
                 <label class="w-full flex items-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200 cursor-pointer">
-                    <i class="fas fa-upload text-blue-600 text-xl mr-4"></i>
+                    <i class="fas fa-file-import text-purple-600 text-xl mr-4"></i>
                     <div class="text-left">
-                        <p class="font-bold text-gray-800">Restaurar Local/Nube</p>
-                        <p class="text-xs text-gray-500">Carga registros desde archivo o servidor</p>
+                        <p class="font-bold text-gray-800">Importar Archivo JSON</p>
+                        <p class="text-xs text-gray-500">Cargar registros desde un backup local</p>
                     </div>
                     <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
                 </label>
@@ -175,40 +183,67 @@
             }
         }
 
-        async function uploadToServer() {
+        async function syncGlobal() {
             try {
-                const data = await db.registros.toArray();
-                const response = await fetch(SERVER_URL, {
+                const portalUser = sessionStorage.getItem('loggedUser');
+                if (!portalUser) return alert("Inicie sesión en el portal para sincronizar");
+
+                const user = JSON.parse(portalUser);
+
+                // Recoger datos locales
+                const dataDrogas = await db.registros.toArray();
+
+                // Conectar con Kilómetros
+                const dbKm = new Dexie('KilometrosDB');
+                dbKm.version(4).stores({ servicios: '++id, userId, fecha' });
+                const servicios = await dbKm.servicios.where('userId').equals(user.username).toArray();
+
+                // Conectar con Detenidos
+                const dbDet = new Dexie('DetenidosDB');
+                dbDet.version(2).stores({ detenidos: '++id, userId, fecha' });
+                const detenidos = await dbDet.detenidos.toArray();
+
+                const syncData = {
+                    servicios: servicios,
+                    drogas: dataDrogas,
+                    detenidos: detenidos,
+                    settings: JSON.parse(localStorage.getItem(`userSettings_${user.username}`) || '{}'),
+                    lastUpdated: new Date().toISOString()
+                };
+
+                const response = await fetch(`/.netlify/functions/sync?userId=${user.username}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        destacamento: localStorage.getItem('destacamento_pref'),
-                        fecha: new Date().toISOString(),
-                        registros: data
-                    })
+                    body: JSON.stringify(syncData)
                 });
 
-                if (response.ok) {
-                    alert("¡Sincronización con el servidor exitosa!");
-                } else {
-                    throw new Error("Error en la respuesta del servidor");
-                }
-            } catch (error) {
-                console.error(error);
-                alert("Error al subir al servidor. Verifica la conexión o URL.");
+                if (response.ok) alert("¡Copia de seguridad en la nube actualizada (3 apps)!");
+                else alert("Error al subir datos a la nube");
+
+            } catch (e) {
+                console.error(e);
+                alert("Error en la sincronización global: " + e.message);
             }
         }
 
         async function downloadFromServer() {
-            if(!confirm("¿Deseas descargar los datos del servidor? Esto sobrescribirá o añadirá datos.")) return;
+            const portalUser = sessionStorage.getItem('loggedUser');
+            if (!portalUser) return alert("Inicie sesión para descargar");
+            const user = JSON.parse(portalUser);
+
+            if(!confirm("¿Deseas descargar los datos de la nube? Esto combinará o actualizará tus registros locales.")) return;
 
             try {
-                const response = await fetch(`${SERVER_URL}?destacamento=${localStorage.getItem('destacamento_pref')}`);
+                const response = await fetch(`/.netlify/functions/sync?userId=${user.username}`);
                 const data = await response.json();
-                if (data && data.registros) {
-                    await db.registros.bulkPut(data.registros);
-                    alert("Datos restaurados desde el servidor.");
+
+                if (data && data.drogas) {
+                    await db.registros.clear();
+                    await db.registros.bulkAdd(data.drogas);
+                    alert("Datos de Drogas restaurados. La página se recargará.");
                     location.reload();
+                } else {
+                    alert("No hay datos de Drogas en la nube para este usuario.");
                 }
             } catch (error) {
                 alert("Error al descargar desde el servidor.");

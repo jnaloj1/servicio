@@ -52,6 +52,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Cambiar texto del botón
             document.querySelector('#drugForm button[type="submit"]').innerText = "Actualizar Registro";
             document.getElementById('drugForm').dataset.editId = editId;
+
+            // Si se solicita PDF automáticamente
+            if (urlParams.get('pdf') === 'true') {
+                setTimeout(() => {
+                    generarPDF(reg);
+                    // Volver al control de kms después de un breve tiempo o quedarse
+                }, 1000);
+            }
         }
     } else {
         const savedDest = localStorage.getItem('destacamento_pref');
