@@ -269,72 +269,23 @@ async function checkOtherAppsData(dateStr) {
         const [d, m, y] = dateStr.split('-');
         const isoDate = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
         const dbDrogas = new Dexie("appDrogasDB");
-        dbDrogas.version(1).stores({ registros: '++id, fecha, dni, resultado, nombre, matricula' });
-        const registrosDrogas = await dbDrogas.registros.where('fecha').equals(isoDate).toArray();
+        dbDrogas.version(1).stores({ registros: '++id, fecha, dni, resultado, nombre, matricula, agente' });
+        // Filtrar por fecha y por el agente que se está visualizando
+        const registrosDrogas = await dbDrogas.registros
+            .where('fecha').equals(isoDate)
+            .filter(r => r.agente === activeUserId)
+            .toArray();
 
         // 2. Consultar Radio Detenidos (Fecha en timestamp del día)
         const dbDetenidos = new Dexie("DetenidosDB");
         dbDetenidos.version(2).stores({ detenidos: '++id, userId, fecha, dniNie, matricula, nombreApellidosDetenido' });
         const startOfDay = new Date(y, m - 1, d).getTime();
         const endOfDay = startOfDay + 86399999;
-        const registrosDetenidos = await dbDetenidos.detenidos.where('fecha').between(startOfDay, endOfDay).toArray();
-
-        if (registrosDrogas.length > 0 || registrosDetenidos.length > 0) {
-            container.style.display = 'block';
-            let html = '<div style="background: #f8f9fa; border-radius: 12px; padding: 12px; border: 1px solid #dee2e6; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">';
-            html += '<h4 style="margin:0 0 10px 0; font-size: 11px; color: #6c757d; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Actividad del día:</h4>';
-
-            if (registrosDrogas.length > 0) {
-                html += `<div style="margin-bottom: 10px;"><div style="display: flex; align-items: center; gap: 5px; color: #1e3a8a; font-weight: 700; font-size: 13px; margin-bottom: 4px;"><i class="material-icons" style="font-size: 16px;">medication</i> DROGAS</div>`;
-                registrosDrogas.forEach(r => {
-                    const color = r.resultado === 'POSITIVO' ? '#d32f2f' : '#2e7d32';
-                    html += `<div onclick="window.location.href='/appDrogas/index.html?edit=${r.id}'" style="cursor: pointer; font-size: 12px; margin-left: 5px; padding: 8px 12px; background: white; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                                <span style="font-weight: 500;">${r.nombre}</span>
-                                <span style="font-weight: 800; color: ${color}; font-size: 10px; background: ${color}10; padding: 2px 6px; border-radius: 4px;">${r.resultado}</span>
-                             </div>`;
-                });
-                html += '</div>';
-            }
-
-            if (registrosDetenidos.length > 0) {
-                html += `<div><div style="display: flex; align-items: center; gap: 5px; color: #1a237e; font-weight: 700; font-size: 13px; margin-bottom: 4px;"><i class="material-icons" style="font-size: 16px;">gavel</i> DETENIDOS</div>`;
-                registrosDetenidos.forEach(r => {
-                    html += `<div onclick="window.location.href='/rado-detenidos/index.html?edit=${r.id}'" style="cursor: pointer; font-size: 12px; margin-left: 5px; padding: 8px 12px; background: white; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                                <span style="font-weight: 500;">${r.nombreApellidosDetenido}</span>
-                                <span style="color: #6c757d; font-size: 10px; font-weight: bold;">${r.dniNie}</span>
-                             </div>`;
-                });
-                html += '</div>';
-            }
-            html += '</div>';
-            container.innerHTML = html;
-        }
-    } catch (e) {
-        console.error("Error al leer bases de datos vinculadas:", e);
-    }
-}
-
-async function checkOtherAppsData(dateStr) {
-    const container = document.getElementById('otherAppsSummary');
-    if (!container) return;
-
-    container.innerHTML = '';
-    container.style.display = 'none';
-
-    try {
-        // 1. Consultar App Drogas (Fecha en formato YYYY-MM-DD)
-        const [d, m, y] = dateStr.split('-');
-        const isoDate = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
-        const dbDrogas = new Dexie("appDrogasDB");
-        dbDrogas.version(1).stores({ registros: '++id, fecha, dni, resultado, nombre, matricula' });
-        const registrosDrogas = await dbDrogas.registros.where('fecha').equals(isoDate).toArray();
-
-        // 2. Consultar Radio Detenidos (Fecha en timestamp del día)
-        const dbDetenidos = new Dexie("DetenidosDB");
-        dbDetenidos.version(2).stores({ detenidos: '++id, userId, fecha, dniNie, matricula, nombreApellidosDetenido' });
-        const startOfDay = new Date(y, m - 1, d).getTime();
-        const endOfDay = startOfDay + 86399999;
-        const registrosDetenidos = await dbDetenidos.detenidos.where('fecha').between(startOfDay, endOfDay).toArray();
+        // Filtrar por fecha y por el usuario que se está visualizando
+        const registrosDetenidos = await dbDetenidos.detenidos
+            .where('fecha').between(startOfDay, endOfDay)
+            .filter(r => r.userId === activeUserId)
+            .toArray();
 
         if (registrosDrogas.length > 0 || registrosDetenidos.length > 0) {
             container.style.display = 'block';
@@ -370,6 +321,7 @@ async function checkOtherAppsData(dateStr) {
         console.warn("Error al leer bases de datos externas:", e);
     }
 }
+
 
 function setupEventListeners() {
     const btnPdf = document.getElementById('btnPdf');
@@ -1111,15 +1063,19 @@ async function updateSummary() {
         const dbDetenidos = new Dexie("DetenidosDB");
         dbDetenidos.version(2).stores({ detenidos: '++id, userId, fecha, dniNie, matricula, nombreApellidosDetenido' });
 
-        // Detenidos
-        const resDetenidos = await dbDetenidos.detenidos.where('fecha').between(startT, endT).toArray();
+        // Detenidos (Filtrar por Usuario Visualizado y Fecha)
+        const allDetenidos = await dbDetenidos.detenidos.where('userId').equals(activeUserId).toArray();
+        const resDetenidos = allDetenidos.filter(r => r.fecha >= startT && r.fecha <= endT);
         const detEl = document.getElementById('totalDetenidos');
         if (detEl) detEl.innerText = resDetenidos.length;
 
-        // Drogas
+        // Drogas (Filtrar por Agente/Usuario Visualizado y Fecha)
         const allDrogas = await dbDrogas.registros.toArray();
         const filteredDrogas = allDrogas.filter(r => {
             if (!r.fecha) return false;
+            // Solo contar si el agente es el usuario que se está visualizando
+            if (r.agente !== activeUserId) return false;
+
             const [y, m, d] = r.fecha.split('-').map(Number);
             const t = new Date(y, m-1, d).getTime();
             return t >= startT && t <= endT;
