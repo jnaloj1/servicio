@@ -17,17 +17,23 @@ exports.handler = async (event, context) => {
         };
     }
 
-    const userId = event.queryStringParameters.userId;
-    if (!userId) {
-        return { statusCode: 400, body: JSON.stringify({ error: 'Missing userId' }) };
-    }
-
-    const client = new Client({
-        connectionString: process.env.DATABASE_URL,
-        ssl: {
-            rejectUnauthorized: false
+        const userId = event.queryStringParameters.userId;
+        if (!userId) {
+            return { statusCode: 400, body: JSON.stringify({ error: 'Falta ID de usuario' }) };
         }
-    });
+
+        // ESTO ES LO MÁS IMPORTANTE:
+        if (!process.env.DATABASE_URL) {
+            return {
+                statusCode: 500,
+                body: JSON.stringify({ error: 'DATABASE_URL no configurada en Netlify' })
+            };
+        }
+
+        const client = new Client({
+            connectionString: process.env.DATABASE_URL,
+            ssl: { rejectUnauthorized: false }
+        });
 
     try {
         await client.connect();
