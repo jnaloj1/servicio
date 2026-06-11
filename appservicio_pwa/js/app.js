@@ -335,6 +335,7 @@ function setupEventListeners() {
     const modalSettings = document.getElementById('settingsModal');
     const modalPdf = document.getElementById('pdfModal');
     const modalList = document.getElementById('listModal');
+    const modalMiniCalendar = document.getElementById('miniCalendarModal');
 
     const closeButtons = document.querySelectorAll('.close');
 
@@ -384,6 +385,26 @@ function setupEventListeners() {
         modalList.style.display = "block";
     };
 
+    document.getElementById('btnMiniCalendar').onclick = () => {
+        renderMiniCalendar();
+        modalMiniCalendar.style.display = "block";
+    };
+
+    const selectMonth = document.getElementById('selectMonth');
+    const selectYear = document.getElementById('selectYear');
+
+    selectMonth.onchange = () => {
+        currentDate.setMonth(parseInt(selectMonth.value));
+        renderCalendar();
+        updateSummary();
+    };
+
+    selectYear.onchange = () => {
+        currentDate.setFullYear(parseInt(selectYear.value));
+        renderCalendar();
+        updateSummary();
+    };
+
     // Modals close
     closeButtons.forEach(btn => {
         btn.onclick = () => {
@@ -393,6 +414,7 @@ function setupEventListeners() {
             modalStats.style.display = "none";
             modalCompare.style.display = "none";
             modalList.style.display = "none";
+            modalMiniCalendar.style.display = "none";
             renderCalendar(); // Refresh calendar in case dates changed
         };
     });
@@ -909,14 +931,37 @@ function getAccountingPeriod(date) {
 
 function renderCalendar() {
     const grid = document.getElementById('calendarGrid');
-    const monthYearLabel = document.getElementById('currentMonthYear');
+    const selectMonth = document.getElementById('selectMonth');
+    const selectYear = document.getElementById('selectYear');
     const dayElements = grid.querySelectorAll('.day, .day-empty');
     dayElements.forEach(el => el.remove());
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-    monthYearLabel.innerText = `${monthNames[month]} ${year}`;
+
+    // Población de dropdowns si están vacíos
+    if (selectMonth.options.length === 0) {
+        monthNames.forEach((name, index) => {
+            const opt = document.createElement('option');
+            opt.value = index;
+            opt.textContent = name;
+            selectMonth.appendChild(opt);
+        });
+    }
+
+    if (selectYear.options.length === 0) {
+        const currentYear = new Date().getFullYear();
+        for (let y = currentYear - 5; y <= currentYear + 5; y++) {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            selectYear.appendChild(opt);
+        }
+    }
+
+    selectMonth.value = month;
+    selectYear.value = year;
 
     const period = getAccountingPeriod(currentDate);
     const todayStr = formatDate(new Date());
@@ -1667,3 +1712,156 @@ async function importData(event) {
 }
 
 // Nota: La función renderList ha sido eliminada.
+
+function renderMiniCalendar() {
+    const grid = document.getElementById('miniCalendarGrid');
+    const yearText = document.getElementById('miniCalendarYearText');
+    const currentYear = currentDate.getFullYear();
+    yearText.innerText = currentYear;
+    grid.innerHTML = '';
+
+    const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+    for (let m = 0; m < 12; m++) {
+       /* const monthDiv = document.createElement('div');
+        monthDiv.style.border = '1px solid #ddd';
+        monthDiv.style.borderRadius = '16px';
+        monthDiv.style.padding = '12px 8px';
+        monthDiv.style.background = 'white';
+        monthDiv.style.cursor = 'pointer';
+        monthDiv.style.display = 'flex';
+        monthDiv.style.flexDirection = 'column';
+        monthDiv.style.alignItems = 'center';
+        monthDiv.style.justifyContent = 'flex-start';
+        monthDiv.style.aspectRatio = '1 / 1.2';
+        monthDiv.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';*/
+
+const monthDiv = document.createElement('div');
+monthDiv.style.border = '1px solid #ddd';
+monthDiv.style.borderRadius = '16px';
+monthDiv.style.padding = '12px 8px';
+monthDiv.style.background = 'white';
+monthDiv.style.cursor = 'pointer';
+monthDiv.style.display = 'flex';
+monthDiv.style.flexDirection = 'column';
+monthDiv.style.alignItems = 'center';
+monthDiv.style.justifyContent = 'flex-start';
+
+
+
+// 1. ELIMINA O COMENTA ESTA LÍNEA (provoca que la tarjeta se estire hacia abajo):
+// monthDiv.style.aspectRatio = '1 / 1.2';
+
+// 2. AÑADE ESTA LÍNEA (fuerza a la tarjeta a medir solo lo que miden sus hijos + paddings):
+monthDiv.style.height = 'fit-content';
+// REPLÁZALA POR ESTA LÍNEA DE CÁLCULO EXACTO:
+
+monthDiv.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+
+
+
+
+
+
+        const title = document.createElement('div');
+        title.innerText = monthNames[m].toUpperCase();
+        title.style.fontWeight = '900';
+        title.style.fontSize = '22px';
+        title.style.color = 'var(--primary-color)';
+        title.style.marginBottom = '12px';
+        monthDiv.appendChild(title);
+
+        const miniGrid = document.createElement('div');
+        miniGrid.style.display = 'grid';
+        miniGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+        miniGrid.style.gridTemplateRows = 'repeat(5, auto)'; // El alto se adapta al contenido
+        miniGrid.style.rowGap = '2px';                       // Reduce la separación vertical entre filas
+        miniGrid.style.columnGap = '4px';                    // Mantiene la separación horizontal original
+        miniGrid.style.alignContent = 'start';
+        miniGrid.style.width = '100%';
+        miniGrid.style.flex = '1';
+
+
+
+
+        // Obtener el periodo contable para este mes
+        const iterDate = new Date(currentYear, m, 1);
+        const period = getAccountingPeriod(iterDate);
+
+        let d = new Date(period.start);
+        while (d <= period.end) {
+            const dayCell = document.createElement('div');
+            dayCell.style.width = '100%';
+            dayCell.style.aspectRatio = '1 / 1';
+            dayCell.style.borderRadius = '8px';
+            dayCell.style.display = 'flex';
+            dayCell.style.flexDirection = 'column';
+            dayCell.style.alignItems = 'center';
+            dayCell.style.justifyContent = 'center';
+            dayCell.style.fontSize = '12px';
+            dayCell.style.fontWeight = 'bold';
+            dayCell.style.position = 'relative';
+            dayCell.style.border = '1px solid transparent';
+
+            const dStr = formatDate(d);
+            const s = serviciosMap[dStr];
+
+            // Número del día
+            const numSpan = document.createElement('span');
+            numSpan.innerText = d.getDate();
+            dayCell.appendChild(numSpan);
+
+            if (s) {
+                // Aplicar clase de color según el servicio
+                const serviceClass = getServiceClass(s.servicio);
+                dayCell.classList.add(serviceClass);
+                dayCell.style.color = (serviceClass === 'service-tarde' || serviceClass === 'service-saliente') ? 'black' : 'white';
+
+                // Calcular iniciales (misma lógica que el calendario principal)
+                let initials = "";
+                const servUpper = (s.servicio || "").toUpperCase();
+                if (servUpper === "DESCANSO SINGULARIZADO") initials = "DAS";
+                else if (servUpper === "PERMISO POR COMISION") initials = "PC";
+                else if (servUpper === "MAÑANA RETRIBUIDA") initials = "MR";
+                else if (servUpper === "TARDE RETRIBUIDA") initials = "TR";
+                else if (servUpper === "NOCHE RETRIBUIDA") initials = "NR";
+                else {
+                    initials = s.servicio.split(' ').filter(w => w.length > 0).map(w => w[0]).join('').substring(0, 2).toUpperCase();
+                }
+
+                const initSpan = document.createElement('span');
+                initSpan.innerText = initials;
+                initSpan.style.fontSize = '7px';
+                initSpan.style.background = 'rgba(255,255,255,0.8)';
+                initSpan.style.color = 'black';
+                initSpan.style.padding = '0 2px';
+                initSpan.style.borderRadius = '2px';
+                initSpan.style.marginTop = '1px';
+                dayCell.appendChild(initSpan);
+            } else {
+                dayCell.style.backgroundColor = '#f5f5f5';
+                dayCell.style.color = '#777';
+            }
+
+            // Fines de semana sin servicio
+            if ((d.getDay() === 0 || d.getDay() === 6) && !s) {
+                dayCell.style.backgroundColor = '#e0e0e0';
+            }
+
+            miniGrid.appendChild(dayCell);
+            d.setDate(d.getDate() + 1);
+        }
+
+        monthDiv.appendChild(miniGrid);
+
+        monthDiv.onclick = () => {
+            currentDate.setMonth(m);
+            currentDate.setFullYear(currentYear);
+            renderCalendar();
+            updateSummary();
+            document.getElementById('miniCalendarModal').style.display = 'none';
+        };
+
+        grid.appendChild(monthDiv);
+    }
+}

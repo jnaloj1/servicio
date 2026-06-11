@@ -96,7 +96,11 @@
         <div id="calendarContainer" class="card">
             <div id="calendarHeader">
                 <button id="prevMonth" class="icon-button"><i class="material-icons">chevron_left</i></button>
-                <h2 id="currentMonthYear"></h2>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <select id="selectMonth" style="width: auto; padding: 4px; font-size: 14px; border: none; font-weight: bold; background: transparent;"></select>
+                    <select id="selectYear" style="width: auto; padding: 4px; font-size: 14px; border: none; font-weight: bold; background: transparent;"></select>
+                    <button id="btnMiniCalendar" class="icon-button" title="Ver año completo"><i class="material-icons">grid_view</i></button>
+                </div>
                 <button id="nextMonth" class="icon-button"><i class="material-icons">chevron_right</i></button>
             </div>
             <div id="calendarGrid">
@@ -389,6 +393,19 @@
                 <!-- Accordion years will be injected here -->
             </div>
             <button id="btnCancelList" class="btn-secondary-outline close" style="margin-top: 20px;">CERRAR</button>
+        </div>
+    </div>
+
+    <!-- Modal Mini Calendario Anual -->
+    <div id="miniCalendarModal" class="modal">
+        <div class="modal-content full-screen-modal">
+            <div class="modal-header-toolbar">
+                <h2 style="flex: 1; text-align: center;">Vista Anual <span id="miniCalendarYearText"></span></h2>
+                <span class="close-icon-btn close">&times;</span>
+            </div>
+            <div class="form-scroll-container" id="miniCalendarGrid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 15px; box-sizing: border-box;">
+                <!-- 12 months will be injected here -->
+            </div>
         </div>
     </div>
 
