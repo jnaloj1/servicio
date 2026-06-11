@@ -171,7 +171,8 @@ async function syncToServer() {
             console.log("Sincronización completa (3 apps) exitosa");
             updateSyncUI('online', 'Sincronizado');
         } else {
-            updateSyncUI('offline', 'Error servidor');
+            const errorData = await response.json().catch(() => ({}));
+            updateSyncUI('offline', errorData.error || 'Error servidor');
         }
     } catch (e) {
         console.warn("No se pudo sincronizar con el servidor:", e);
