@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupLoginEventListeners() {
     const btnLogout = document.getElementById('btnLogout');
     const adminUserSelect = document.getElementById('adminUserSelect');
+    const btnDeleteUser = document.getElementById('btnDeleteUser'); // Nuevo
 
     btnLogout.onclick = () => {
         sessionStorage.removeItem('loggedUser');
@@ -74,6 +75,38 @@ function setupLoginEventListeners() {
         const targetUser = e.target.value;
         await refreshAppData(targetUser);
     };
+
+         // ... (botones de logout y onchange del select) ...
+
+         if (btnDeleteUser) {
+             btnDeleteUser.onclick = async () => {
+                 const userToDelete = adminUserSelect.value;
+                 if (userToDelete === currentUser.username) {
+                     alert("No puedes eliminar tu propio usuario.");
+                     return;
+                 }
+
+                 if (confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario "${userToDelete}" y todos sus datos en la nube?`)) {
+                     try {
+                         const response = await fetch(`/.netlify/functions/sync?userId=${userToDelete}`, {
+                             method: 'DELETE'
+                         });
+
+                         if (response.ok) {
+                             alert(`Usuario ${userToDelete} eliminado con éxito.`);
+                             location.reload(); // Recargar para actualizar la lista de usuarios
+                         } else {
+                             const err = await response.json();
+                             alert("Error al eliminar: " + (err.error || "Error servidor"));
+                         }
+                     } catch (e) {
+                         console.error(e);
+                         alert("Error de conexión al intentar eliminar usuario.");
+                     }
+                 }
+             };
+         }
+     }
 }
 async function startApp(user) {
     currentUser = user;

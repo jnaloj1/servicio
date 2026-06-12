@@ -87,12 +87,20 @@
     </header>
 
     <main id="appContent" style="display: none;">
+        <!-- Busca este bloque y reemplázalo -->
         <div id="adminPanel" class="card" style="display: none; background: #e8f5e9; border-bottom: 2px solid #2e7d32; padding: 8px 16px;">
             <div style="display: flex; align-items: center; justify-content: space-between;">
                 <span style="font-weight: bold; color: #2e7d32;">VISTA ADMIN</span>
-                <select id="adminUserSelect" style="width: auto; padding: 4px; font-size: 12px;"></select>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <select id="adminUserSelect" style="width: auto; padding: 4px; font-size: 12px;"></select>
+                    <!-- BOTÓN NUEVO -->
+                    <button id="btnDeleteUser" class="icon-button" style="color: #c62828; padding: 0;" title="Eliminar usuario seleccionado">
+                        <i class="material-icons">person_remove</i>
+                    </button>
+                </div>
             </div>
         </div>
+
         <div id="calendarContainer" class="card">
             <div id="calendarHeader">
                 <button id="prevMonth" class="icon-button"><i class="material-icons">chevron_left</i></button>

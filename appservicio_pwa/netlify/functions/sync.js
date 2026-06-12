@@ -19,6 +19,11 @@ exports.handler = async (event, context) => {
 
     try {
         await client.connect();
+if (event.httpMethod === 'DELETE') {
+    await client.query('DELETE FROM users WHERE username = $1', [userId]);
+    return { statusCode: 200, headers, body: JSON.stringify({ status: 'ok', message: 'Usuario eliminado' }) };
+}
+
 
         if (event.httpMethod === 'POST') {
             const { settings, servicios, drogas, detenidos } = JSON.parse(event.body);
