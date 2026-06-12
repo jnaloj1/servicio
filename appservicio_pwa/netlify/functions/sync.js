@@ -1,99 +1,78 @@
 const { Client } = require('pg');
 
 exports.handler = async (event, context) => {
-    // Solo permitir GET y POST
-    if (event.httpMethod !== 'GET' && event.httpMethod !== 'POST' && event.httpMethod !== 'OPTIONS') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
-    }
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+    };
 
-    if (event.httpMethod === 'OPTIONS') {
-        return {
-            statusCode: 200,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
-            }
-        };
-    }
+    if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers };
 
-        const userId = event.queryStringParameters.userId;
-        if (!userId) {
-            return { statusCode: 400, body: JSON.stringify({ error: 'Falta ID de usuario' }) };
-        }
+    const userId = event.queryStringParameters.userId;
+    if (!userId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Falta userId' }) };
 
-        // ESTO ES LO MÁS IMPORTANTE:
-        if (!process.env.DATABASE_URL) {
-            return {
-                statusCode: 500,
-                body: JSON.stringify({ error: 'DATABASE_URL no configurada en Netlify' })
-            };
-        }
-
-        const client = new Client({
-            connectionString: process.env.DATABASE_URL,
-            ssl: { rejectUnauthorized: false }
-        });
+    const client = new Client({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+    });
 
     try {
         await client.connect();
 
-        // Asegurar que la tabla existe
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS user_sync (
-                user_id VARCHAR(50) PRIMARY KEY,
-                data JSONB NOT NULL,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-
         if (event.httpMethod === 'POST') {
-            let data;
-            try {
-                data = JSON.parse(event.body);
-            } catch (e) {
-                data = event.body; // Fallback si ya es objeto o string simple
+            const { settings, servicios, drogas, detenidos } = JSON.parse(event.body);
+            await client.query('BEGIN');
+
+            // 1. Usuarios
+            await client.query(`INSERT INTO users (username, nombre, apellidos, empleo, unidad, subsector)
+                VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (username) DO UPDATE SET
+                nombre = EXCLUDED.nombre, apellidos = EXCLUDED.apellidos, empleo = EXCLUDED.empleo, unidad = EXCLUDED.unidad, subsector = EXCLUDED.subsector, updated_at = CURRENT_TIMESTAMP`,
+                [userId, settings.nombre, settings.apellidos, settings.empleo, settings.unidad, settings.subsector]);
+
+            // 2. Kilómetros
+            await client.query('DELETE FROM servicios WHERE user_id = $1', [userId]);
+            for (const s of servicios) {
+                await client.query(`INSERT INTO servicios (user_id, fecha, servicio, horario_inicio, horario_fin, vehiculo, distancia, motivo, observaciones)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`, [userId, s.fecha, s.servicio, s.horarioInicio, s.horarioFin, s.vehiculo, s.distancia, s.motivo, s.observaciones]);
             }
 
-            await client.query(`
-                INSERT INTO user_sync (user_id, data, updated_at)
-                VALUES ($1, $2, CURRENT_TIMESTAMP)
-                ON CONFLICT (user_id)
-                DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at
-            `, [userId, data]);
+            // 3. Drogas
+            await client.query('DELETE FROM registros_drogas WHERE user_id = $1', [userId]);
+            if (drogas) for (const d of drogas) {
+                await client.query(`INSERT INTO registros_drogas (user_id, fecha, dni, nombre, matricula, resultado, external_id)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)`, [userId, d.fecha, d.dni, d.nombre, d.matricula, d.resultado, d.id]);
+            }
 
-            return {
-                statusCode: 200,
-                headers: { 'Access-Control-Allow-Origin': '*' },
-                body: JSON.stringify({ status: 'ok', message: 'Sincronizado con éxito' })
-            };
+            // 4. Detenidos
+            await client.query('DELETE FROM registros_detenidos WHERE user_id = $1', [userId]);
+            if (detenidos) for (const det of detenidos) {
+                await client.query(`INSERT INTO registros_detenidos (user_id, fecha_timestamp, dni_nie, nombre_apellidos, matricula, external_id)
+                    VALUES ($1, $2, $3, $4, $5, $6)`, [userId, det.fecha, det.dniNie, det.nombreApellidosDetenido, det.matricula, det.id]);
+            }
+
+            await client.query('COMMIT');
+            return { statusCode: 200, headers, body: JSON.stringify({ status: 'ok' }) };
         }
 
         if (event.httpMethod === 'GET') {
-            const res = await client.query('SELECT data FROM user_sync WHERE user_id = $1', [userId]);
-            if (res.rows.length > 0) {
-                return {
-                    statusCode: 200,
-                    headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
-                    body: JSON.stringify(res.rows[0].data)
-                };
-            } else {
-                return {
-                    statusCode: 200,
-                    headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ servicios: [], settings: {} })
-                };
-            }
-        }
+            const userRes = await client.query('SELECT * FROM users WHERE username = $1', [userId]);
+            const servRes = await client.query('SELECT * FROM servicios WHERE user_id = $1', [userId]);
+            const drogRes = await client.query('SELECT * FROM registros_drogas WHERE user_id = $1', [userId]);
+            const detRes = await client.query('SELECT * FROM registros_detenidos WHERE user_id = $1', [userId]);
 
+            return {
+                statusCode: 200, headers,
+                body: JSON.stringify({
+                    settings: userRes.rows[0] || {},
+                    servicios: servRes.rows.map(s => ({ ...s, horarioInicio: s.horario_inicio, horarioFin: s.horario_fin })),
+                    drogas: drogRes.rows.map(d => ({ ...d, id: d.external_id })),
+                    detenidos: detRes.rows.map(d => ({ ...d, id: d.external_id, fecha: d.fecha_timestamp, nombreApellidosDetenido: d.nombre_apellidos, dniNie: d.dni_nie }))
+                })
+            };
+        }
     } catch (err) {
-        console.error(err);
-        return {
-            statusCode: 500,
-            headers: { 'Access-Control-Allow-Origin': '*' },
-            body: JSON.stringify({ error: err.message })
-        };
-    } finally {
-        await client.end();
-    }
+        if (client) await client.query('ROLLBACK');
+        return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+    } finally { await client.end(); }
 };

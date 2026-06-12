@@ -75,14 +75,12 @@ function setupLoginEventListeners() {
         await refreshAppData(targetUser);
     };
 }
-
 async function startApp(user) {
     currentUser = user;
     activeUserId = user.username;
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('mainHeader').style.display = 'block';
     document.getElementById('appContent').style.display = 'flex';
-
     document.getElementById('headerTitle').innerText = `Hola, ${user.username}`;
 
     if (user.isAdmin) {
@@ -94,9 +92,16 @@ async function startApp(user) {
 
     await refreshAppData(activeUserId);
     fillSettingsForm();
-    await syncFromServer();
-}
 
+    // --- Sincronización Automática al Iniciar Sesión ---
+    if (navigator.onLine) {
+        console.log("Iniciando auto-sync...");
+        // 1. Intentar descargar datos (solo si local está vacío o para forzar actualización silenciosa)
+        await syncFromServer(false);
+        // 2. Subir datos actuales a la nube
+        await syncToServer();
+    }
+}
 async function refreshAppData(userId) {
     activeUserId = userId || (currentUser ? currentUser.username : null);
     if (!activeUserId) return;
