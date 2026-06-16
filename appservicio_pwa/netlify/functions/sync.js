@@ -4,7 +4,7 @@ exports.handler = async (event, context) => {
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+        'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS'
     };
 
     if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers };
@@ -19,11 +19,12 @@ exports.handler = async (event, context) => {
 
     try {
         await client.connect();
-if (event.httpMethod === 'DELETE') {
-    await client.query('DELETE FROM users WHERE username = $1', [userId]);
-    return { statusCode: 200, headers, body: JSON.stringify({ status: 'ok', message: 'Usuario eliminado' }) };
-}
 
+        // --- LÓGICA DELETE (Eliminar Usuario) ---
+        if (event.httpMethod === 'DELETE') {
+            await client.query('DELETE FROM users WHERE username = $1', [userId]);
+            return { statusCode: 200, headers, body: JSON.stringify({ status: 'ok', message: 'Usuario y datos eliminados' }) };
+        }
 
         if (event.httpMethod === 'POST') {
             const { settings, servicios, drogas, detenidos } = JSON.parse(event.body);
@@ -37,10 +38,27 @@ if (event.httpMethod === 'DELETE') {
 
             // 2. Kilómetros
             await client.query('DELETE FROM servicios WHERE user_id = $1', [userId]);
-            for (const s of servicios) {
+          // En la parte de 'POST', dentro del bucle de servicios:
+          for (const s of servicios) {
+              await client.query(`
+                  INSERT INTO servicios (user_id, fecha, servicio, horario_inicio, horario_fin, vehiculo, distancia, motivo, observaciones)
+                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                  ON CONFLICT (user_id, fecha)
+                  DO UPDATE SET
+                      servicio = EXCLUDED.servicio,
+                      horario_inicio = EXCLUDED.horario_inicio,
+                      horario_fin = EXCLUDED.horario_fin,
+                      vehiculo = EXCLUDED.vehiculo,
+                      distancia = EXCLUDED.distancia,
+                      motivo = EXCLUDED.motivo,
+                      observaciones = EXCLUDED.observaciones
+              `, [userId, s.fecha, s.servicio, s.horarioInicio, s.horarioFin, s.vehiculo, s.distancia, s.motivo, s.observaciones]);
+          }
+
+           /* for (const s of servicios) {
                 await client.query(`INSERT INTO servicios (user_id, fecha, servicio, horario_inicio, horario_fin, vehiculo, distancia, motivo, observaciones)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`, [userId, s.fecha, s.servicio, s.horarioInicio, s.horarioFin, s.vehiculo, s.distancia, s.motivo, s.observaciones]);
-            }
+            }*/
 
             // 3. Drogas
             await client.query('DELETE FROM registros_drogas WHERE user_id = $1', [userId]);

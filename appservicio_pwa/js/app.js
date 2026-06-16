@@ -64,49 +64,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupLoginEventListeners() {
     const btnLogout = document.getElementById('btnLogout');
     const adminUserSelect = document.getElementById('adminUserSelect');
-    const btnDeleteUser = document.getElementById('btnDeleteUser'); // Nuevo
+    const btnDeleteUser = document.getElementById('btnDeleteUser');
 
     btnLogout.onclick = () => {
         sessionStorage.removeItem('loggedUser');
         window.location.href = '/';
     };
 
+    if (btnDeleteUser) {
+        btnDeleteUser.onclick = async () => {
+            const userToDelete = adminUserSelect.value;
+            if (userToDelete === currentUser.username) {
+                alert("No puedes eliminar tu propio usuario.");
+                return;
+            }
+
+            if (confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario "${userToDelete}" y todos sus datos en la nube?`)) {
+                try {
+                    const response = await fetch(`/.netlify/functions/sync?userId=${userToDelete}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        alert(`Usuario ${userToDelete} eliminado con éxito.`);
+                        location.reload();
+                    } else {
+                        const err = await response.json().catch(() => ({}));
+                        alert("Error al eliminar: " + (err.error || "Error servidor"));
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Error de conexión.");
+                }
+            }
+        };
+    }
+
     adminUserSelect.onchange = async (e) => {
         const targetUser = e.target.value;
         await refreshAppData(targetUser);
     };
-
-         // ... (botones de logout y onchange del select) ...
-
-         if (btnDeleteUser) {
-             btnDeleteUser.onclick = async () => {
-                 const userToDelete = adminUserSelect.value;
-                 if (userToDelete === currentUser.username) {
-                     alert("No puedes eliminar tu propio usuario.");
-                     return;
-                 }
-
-                 if (confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario "${userToDelete}" y todos sus datos en la nube?`)) {
-                     try {
-                         const response = await fetch(`/.netlify/functions/sync?userId=${userToDelete}`, {
-                             method: 'DELETE'
-                         });
-
-                         if (response.ok) {
-                             alert(`Usuario ${userToDelete} eliminado con éxito.`);
-                             location.reload(); // Recargar para actualizar la lista de usuarios
-                         } else {
-                             const err = await response.json();
-                             alert("Error al eliminar: " + (err.error || "Error servidor"));
-                         }
-                     } catch (e) {
-                         console.error(e);
-                         alert("Error de conexión al intentar eliminar usuario.");
-                     }
-                 }
-             };
-         }
-     }
 }
 async function startApp(user) {
     currentUser = user;
@@ -232,7 +229,10 @@ async function syncFromServer(isManual = false) {
         updateSyncUI('syncing', 'Comprobando nube...');
         const response = await fetch(`/.netlify/functions/sync?userId=${currentUser.username}&t=${Date.now()}`);
         if (!response.ok) {
-            if (isManual) alert("No se pudo conectar con la nube");
+            const errorData = await response.json().catch(() => ({}));
+            const msg = errorData.error || 'Error servidor';
+            updateSyncUI('offline', msg);
+            if (isManual) alert("No se pudo conectar con la nube: " + msg);
             return;
         }
 
@@ -520,23 +520,23 @@ function setupEventListeners() {
 
         if (servicio === "MAÑANA" || servicio === "MAÑANA RETRIBUIDA") {
             hInicio.value = "06:00";
-            hFin.value = "14:00";
+            hFin.value = "14:30";
             vehiculo.value = "MOTOCICLETA";
         } else if (servicio === "TARDE" || servicio === "TARDE RETRIBUIDA") {
             hInicio.value = "14:00";
-            hFin.value = "22:00";
+            hFin.value = "22:30";
             vehiculo.value = "MOTOCICLETA";
         } else if (servicio === "NOCHE" || servicio === "ENTRANTE NOCHE" || servicio === "NOCHE RETRIBUIDA") {
             hInicio.value = "22:00";
-            hFin.value = "06:00";
+            hFin.value = "06:30";
             vehiculo.value = "COCHE";
         } else if (servicio === "SALIENTE NOCHE") {
-            hInicio.value = "06:00";
-            hFin.value = "06:00";
+            hInicio.value = "06:30";
+            hFin.value = "06:30";
             vehiculo.value = "NINGUNO";
         } else if (servicio === "DESCANSO FESTIVO" || servicio === "BAJA"|| servicio === "DESCANSO SINGULARIZADO" || servicio === "VACACIONES" || servicio === "ASUNTOS PARTICULARES" || servicio.startsWith("PERMISO") || servicio === "COMISION SERVICIO") {
             hInicio.value = "06:00";
-            hFin.value = "13:30";
+            hFin.value = "14:30";
             vehiculo.value = "NINGUNO";
         } else if (servicio === "OFICINA") {
             hInicio.value = "07:00";
@@ -640,13 +640,13 @@ function setupEventListeners() {
         }
 
         const pattern = [
-            { s: "MAÑANA", hi: "06:00", hf: "14:00", v: "MOTOCICLETA" },
-            { s: "MAÑANA", hi: "06:00", hf: "14:00", v: "MOTOCICLETA" },
-            { s: "MAÑANA", hi: "06:00", hf: "14:00", v: "MOTOCICLETA" },
-            { s: "TARDE", hi: "14:00", hf: "22:00", v: "MOTOCICLETA" },
-            { s: "TARDE", hi: "14:00", hf: "22:00", v: "MOTOCICLETA" },
-            { s: "NOCHE", hi: "22:00", hf: "06:00", v: "COCHE" },
-            { s: "SALIENTE NOCHE", hi: "06:00", hf: "06:00", v: "NINGUNO" },
+            { s: "MAÑANA", hi: "06:00", hf: "14:30", v: "MOTOCICLETA" },
+            { s: "MAÑANA", hi: "06:00", hf: "14:30", v: "MOTOCICLETA" },
+            { s: "MAÑANA", hi: "06:00", hf: "14:30", v: "MOTOCICLETA" },
+            { s: "TARDE", hi: "14:00", hf: "22:30", v: "MOTOCICLETA" },
+            { s: "TARDE", hi: "14:00", hf: "22:30", v: "MOTOCICLETA" },
+            { s: "NOCHE", hi: "22:00", hf: "06:30", v: "COCHE" },
+            { s: "SALIENTE NOCHE", hi: "06:30", hf: "06:30", v: "NINGUNO" },
             { s: "DESCANSO SEMANAL", hi: "00:00", hf: "00:00", v: "NINGUNO" },
             { s: "DESCANSO SEMANAL", hi: "00:00", hf: "00:00", v: "NINGUNO" },
             { s: "DESCANSO SEMANAL", hi: "00:00", hf: "00:00", v: "NINGUNO" },
@@ -1762,18 +1762,7 @@ function renderMiniCalendar() {
     const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
     for (let m = 0; m < 12; m++) {
-       /* const monthDiv = document.createElement('div');
-        monthDiv.style.border = '1px solid #ddd';
-        monthDiv.style.borderRadius = '16px';
-        monthDiv.style.padding = '12px 8px';
-        monthDiv.style.background = 'white';
-        monthDiv.style.cursor = 'pointer';
-        monthDiv.style.display = 'flex';
-        monthDiv.style.flexDirection = 'column';
-        monthDiv.style.alignItems = 'center';
-        monthDiv.style.justifyContent = 'flex-start';
-        monthDiv.style.aspectRatio = '1 / 1.2';
-        monthDiv.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';*/
+
 
 const monthDiv = document.createElement('div');
 monthDiv.style.border = '1px solid #ddd';
