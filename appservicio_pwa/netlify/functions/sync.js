@@ -41,8 +41,8 @@ exports.handler = async (event, context) => {
           // En la parte de 'POST', dentro del bucle de servicios:
           for (const s of servicios) {
               await client.query(`
-                  INSERT INTO servicios (user_id, fecha, servicio, horario_inicio, horario_fin, vehiculo, distancia, motivo, observaciones)
-                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                  INSERT INTO servicios (user_id, fecha, servicio, horario_inicio, horario_fin, vehiculo, distancia, denuncias, motivo, observaciones)
+                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                   ON CONFLICT (user_id, fecha)
                   DO UPDATE SET
                       servicio = EXCLUDED.servicio,
@@ -50,9 +50,10 @@ exports.handler = async (event, context) => {
                       horario_fin = EXCLUDED.horario_fin,
                       vehiculo = EXCLUDED.vehiculo,
                       distancia = EXCLUDED.distancia,
+                      denuncias = EXCLUDED.denuncias,
                       motivo = EXCLUDED.motivo,
                       observaciones = EXCLUDED.observaciones
-              `, [userId, s.fecha, s.servicio, s.horarioInicio, s.horarioFin, s.vehiculo, s.distancia, s.motivo, s.observaciones]);
+              `, [userId, s.fecha, s.servicio, s.horarioInicio, s.horarioFin, s.vehiculo, s.distancia, s.denuncias || 0, s.motivo, s.observaciones]);
           }
 
            /* for (const s of servicios) {

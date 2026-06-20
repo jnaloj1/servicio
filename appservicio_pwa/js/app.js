@@ -564,6 +564,7 @@ function setupEventListeners() {
 
     try {
         const distValue = document.getElementById('fDistancia').value.toString().replace(',', '.');
+        const denunciasValue = document.getElementById('fDenuncias').value;
         const servicio = {
             fecha: document.getElementById('fFecha').value,
             servicio: document.getElementById('fServicio').value,
@@ -571,6 +572,7 @@ function setupEventListeners() {
             horarioFin: document.getElementById('fFin').value,
             vehiculo: document.getElementById('fVehiculo').value,
             distancia: parseFloat(distValue) || 0,
+            denuncias: parseInt(denunciasValue) || 0,
             motivo: (document.getElementById('fMotivo').value || '').toUpperCase(),
             observaciones: (document.getElementById('fObservaciones').value || '').toUpperCase()
         };
@@ -922,6 +924,7 @@ function actualizarFormParaFechaSeleccionada() {
         document.getElementById('fFin').value = s.horarioFin;
         document.getElementById('fVehiculo').value = s.vehiculo || "NINGUNO";
         document.getElementById('fDistancia').value = s.distancia;
+        document.getElementById('fDenuncias').value = s.denuncias || 0;
         document.getElementById('fMotivo').value = s.motivo || '';
         document.getElementById('fObservaciones').value = s.observaciones || '';
         btnDelete.style.display = 'block';
@@ -1071,6 +1074,23 @@ function createDayCell(grid, dayNumber, dateStr, isCurrentMonth, todayStr, selec
         dayDiv.classList.add('has-service');
         dayDiv.classList.add(getServiceClass(s.servicio));
 
+        // Mostrar número de denuncias si existen
+        if (s.denuncias > 0) {
+            const denBadge = document.createElement('span');
+            denBadge.innerText = s.denuncias;
+            denBadge.style.position = 'absolute';
+            denBadge.style.top = '2px';
+            denBadge.style.right = '2px';
+            denBadge.style.background = '#ffeb3b';
+            denBadge.style.color = '#000';
+            denBadge.style.fontSize = '8px';
+            denBadge.style.fontWeight = 'bold';
+            denBadge.style.padding = '0 3px';
+            denBadge.style.borderRadius = '4px';
+            denBadge.style.border = '1px solid #000';
+            dayDiv.appendChild(denBadge);
+        }
+
         // Obtener iniciales: personalizada para DESCANSO SINGULARIZADO o genérica
         let initials = "";
         const servUpper = (s.servicio || "").toUpperCase();
@@ -1172,6 +1192,11 @@ async function updateSummary() {
         const negEl = document.getElementById('totalDrogasNeg');
         if (posEl) posEl.innerText = pos;
         if (negEl) negEl.innerText = neg;
+
+        // Total Denuncias en el periodo
+        const totalDenuncias = filtered.reduce((acc, s) => acc + (parseInt(s.denuncias) || 0), 0);
+        const denEl = document.getElementById('totalDenuncias');
+        if (denEl) denEl.innerText = totalDenuncias;
 
     } catch(e) {
         console.warn("Error al cargar estadísticas adicionales:", e);
