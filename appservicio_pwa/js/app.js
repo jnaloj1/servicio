@@ -520,23 +520,23 @@ function setupEventListeners() {
 
         if (servicio === "MAÑANA" || servicio === "MAÑANA RETRIBUIDA") {
             hInicio.value = "06:00";
-            hFin.value = "14:30";
+            hFin.value = "14:00";
             vehiculo.value = "MOTOCICLETA";
         } else if (servicio === "TARDE" || servicio === "TARDE RETRIBUIDA") {
             hInicio.value = "14:00";
-            hFin.value = "22:30";
+            hFin.value = "22:00";
             vehiculo.value = "MOTOCICLETA";
         } else if (servicio === "NOCHE" || servicio === "ENTRANTE NOCHE" || servicio === "NOCHE RETRIBUIDA") {
             hInicio.value = "22:00";
-            hFin.value = "06:30";
+            hFin.value = "06:00";
             vehiculo.value = "COCHE";
         } else if (servicio === "SALIENTE NOCHE") {
-            hInicio.value = "06:30";
-            hFin.value = "06:30";
+            hInicio.value = "00:00";
+            hFin.value = "00:00";
             vehiculo.value = "NINGUNO";
         } else if (servicio === "DESCANSO FESTIVO" || servicio === "BAJA"|| servicio === "DESCANSO SINGULARIZADO" || servicio === "VACACIONES" || servicio === "ASUNTOS PARTICULARES" || servicio.startsWith("PERMISO") || servicio === "COMISION SERVICIO") {
             hInicio.value = "06:00";
-            hFin.value = "14:30";
+            hFin.value = "13:30";
             vehiculo.value = "NINGUNO";
         } else if (servicio === "OFICINA") {
             hInicio.value = "07:00";
