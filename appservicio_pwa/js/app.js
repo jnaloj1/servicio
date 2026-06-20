@@ -1159,6 +1159,17 @@ async function updateSummary() {
     const startT = new Date(period.start).setHours(0,0,0,0);
     const endT = new Date(period.end).setHours(23,59,59,999);
 
+    const filtered = servicios.filter(s => {
+        if (!s || !s.fecha) return false;
+        const [d, m, y] = s.fecha.split('-').map(Number);
+        const sDate = new Date(y, m - 1, d).getTime();
+        return sDate >= startT && sDate <= endT;
+    }).sort((a, b) => {
+        const [d1, m1, y1] = a.fecha.split('-').map(Number);
+        const [d2, m2, y2] = b.fecha.split('-').map(Number);
+        return new Date(y1, m1 - 1, d1) - new Date(y2, m2 - 1, d2);
+    });
+
     // --- Cálculo de Estadísticas Adicionales (Otras Apps) ---
     try {
         const dbDrogas = new Dexie("appDrogasDB");
@@ -1201,17 +1212,6 @@ async function updateSummary() {
     } catch(e) {
         console.warn("Error al cargar estadísticas adicionales:", e);
     }
-
-    const filtered = servicios.filter(s => {
-        if (!s || !s.fecha) return false;
-        const [d, m, y] = s.fecha.split('-').map(Number);
-        const sDate = new Date(y, m - 1, d).getTime();
-        return sDate >= startT && sDate <= endT;
-    }).sort((a, b) => {
-        const [d1, m1, y1] = a.fecha.split('-').map(Number);
-        const [d2, m2, y2] = b.fecha.split('-').map(Number);
-        return new Date(y1, m1 - 1, d1) - new Date(y2, m2 - 1, d2);
-    });
 
     const servicesWithHours = filtered.filter(s => s.horarioInicio && s.horarioFin && s.horarioInicio !== s.horarioFin);
 

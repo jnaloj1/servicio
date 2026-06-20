@@ -14,8 +14,11 @@ exports.handler = async (event, context) => {
 
     const client = new Client({
         connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false }
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 10000, // 10 segundos de timeout para conectar
     });
+
+    let isTransactionActive = false;
 
     try {
         await client.connect();
@@ -28,54 +31,58 @@ exports.handler = async (event, context) => {
 
         if (event.httpMethod === 'POST') {
             const { settings, servicios, drogas, detenidos } = JSON.parse(event.body);
+
             await client.query('BEGIN');
+            isTransactionActive = true;
 
             // 1. Usuarios
-            await client.query(`INSERT INTO users (username, nombre, apellidos, empleo, unidad, subsector)
-                VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (username) DO UPDATE SET
-                nombre = EXCLUDED.nombre, apellidos = EXCLUDED.apellidos, empleo = EXCLUDED.empleo, unidad = EXCLUDED.unidad, subsector = EXCLUDED.subsector, updated_at = CURRENT_TIMESTAMP`,
-                [userId, settings.nombre, settings.apellidos, settings.empleo, settings.unidad, settings.subsector]);
+            if (settings) {
+                await client.query(`INSERT INTO users (username, nombre, apellidos, empleo, unidad, subsector)
+                    VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (username) DO UPDATE SET
+                    nombre = EXCLUDED.nombre, apellidos = EXCLUDED.apellidos, empleo = EXCLUDED.empleo, unidad = EXCLUDED.unidad, subsector = EXCLUDED.subsector, updated_at = CURRENT_TIMESTAMP`,
+                    [userId, settings.nombre, settings.apellidos, settings.empleo, settings.unidad, settings.subsector]);
+            }
 
-            // 2. Kilómetros
-            await client.query('DELETE FROM servicios WHERE user_id = $1', [userId]);
-          // En la parte de 'POST', dentro del bucle de servicios:
-          for (const s of servicios) {
-              await client.query(`
-                  INSERT INTO servicios (user_id, fecha, servicio, horario_inicio, horario_fin, vehiculo, distancia, denuncias, motivo, observaciones)
-                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                  ON CONFLICT (user_id, fecha)
-                  DO UPDATE SET
-                      servicio = EXCLUDED.servicio,
-                      horario_inicio = EXCLUDED.horario_inicio,
-                      horario_fin = EXCLUDED.horario_fin,
-                      vehiculo = EXCLUDED.vehiculo,
-                      distancia = EXCLUDED.distancia,
-                      denuncias = EXCLUDED.denuncias,
-                      motivo = EXCLUDED.motivo,
-                      observaciones = EXCLUDED.observaciones
-              `, [userId, s.fecha, s.servicio, s.horarioInicio, s.horarioFin, s.vehiculo, s.distancia, s.denuncias || 0, s.motivo, s.observaciones]);
-          }
-
-           /* for (const s of servicios) {
-                await client.query(`INSERT INTO servicios (user_id, fecha, servicio, horario_inicio, horario_fin, vehiculo, distancia, motivo, observaciones)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`, [userId, s.fecha, s.servicio, s.horarioInicio, s.horarioFin, s.vehiculo, s.distancia, s.motivo, s.observaciones]);
-            }*/
+            // 2. Kilómetros (Usamos ON CONFLICT, no hace falta el DELETE previo que ralentiza)
+            if (servicios && servicios.length > 0) {
+                for (const s of servicios) {
+                    await client.query(`
+                        INSERT INTO servicios (user_id, fecha, servicio, horario_inicio, horario_fin, vehiculo, distancia, denuncias, motivo, observaciones)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                        ON CONFLICT (user_id, fecha)
+                        DO UPDATE SET
+                            servicio = EXCLUDED.servicio,
+                            horario_inicio = EXCLUDED.horario_inicio,
+                            horario_fin = EXCLUDED.horario_fin,
+                            vehiculo = EXCLUDED.vehiculo,
+                            distancia = EXCLUDED.distancia,
+                            denuncias = EXCLUDED.denuncias,
+                            motivo = EXCLUDED.motivo,
+                            observaciones = EXCLUDED.observaciones
+                    `, [userId, s.fecha, s.servicio, s.horarioInicio, s.horarioFin, s.vehiculo, s.distancia, s.denuncias || 0, s.motivo, s.observaciones]);
+                }
+            }
 
             // 3. Drogas
             await client.query('DELETE FROM registros_drogas WHERE user_id = $1', [userId]);
-            if (drogas) for (const d of drogas) {
-                await client.query(`INSERT INTO registros_drogas (user_id, fecha, dni, nombre, matricula, resultado, external_id)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7)`, [userId, d.fecha, d.dni, d.nombre, d.matricula, d.resultado, d.id]);
+            if (drogas && drogas.length > 0) {
+                for (const d of drogas) {
+                    await client.query(`INSERT INTO registros_drogas (user_id, fecha, dni, nombre, matricula, resultado, external_id)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7)`, [userId, d.fecha, d.dni, d.nombre, d.matricula, d.resultado, d.id]);
+                }
             }
 
             // 4. Detenidos
             await client.query('DELETE FROM registros_detenidos WHERE user_id = $1', [userId]);
-            if (detenidos) for (const det of detenidos) {
-                await client.query(`INSERT INTO registros_detenidos (user_id, fecha_timestamp, dni_nie, nombre_apellidos, matricula, external_id)
-                    VALUES ($1, $2, $3, $4, $5, $6)`, [userId, det.fecha, det.dniNie, det.nombreApellidosDetenido, det.matricula, det.id]);
+            if (detenidos && detenidos.length > 0) {
+                for (const det of detenidos) {
+                    await client.query(`INSERT INTO registros_detenidos (user_id, fecha_timestamp, dni_nie, nombre_apellidos, matricula, external_id)
+                        VALUES ($1, $2, $3, $4, $5, $6)`, [userId, det.fecha, det.dniNie, det.nombreApellidosDetenido, det.matricula, det.id]);
+                }
             }
 
             await client.query('COMMIT');
+            isTransactionActive = false;
             return { statusCode: 200, headers, body: JSON.stringify({ status: 'ok' }) };
         }
 
@@ -96,7 +103,12 @@ exports.handler = async (event, context) => {
             };
         }
     } catch (err) {
-        if (client) await client.query('ROLLBACK');
+        console.error("Error en sync.js:", err.message);
+        if (isTransactionActive) {
+            try { await client.query('ROLLBACK'); } catch (e) { /* Ignorar error en rollback */ }
+        }
         return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
-    } finally { await client.end(); }
+    } finally {
+        try { await client.end(); } catch (e) { /* Ignorar error al cerrar */ }
+    }
 };
