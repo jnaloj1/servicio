@@ -3,6 +3,7 @@ currentDate.setDate(1);
 let selectedDate = new Date();
 let servicios = [];
 let serviciosMap = {};
+let extraStatsMap = {}; // Caché para positivos, negativos y detenidos por día
 let currentUser = null; // Guardará el objeto del usuario actual
 let activeUserId = null; // ID del usuario cuyos datos se están visualizando
 
@@ -999,7 +1000,7 @@ function getAccountingPeriod(date) {
     return { start, end };
 }
 
-function renderCalendar() {
+async function renderCalendar() {
     const grid = document.getElementById('calendarGrid');
     const selectMonth = document.getElementById('selectMonth');
     const selectYear = document.getElementById('selectYear');
@@ -1036,6 +1037,40 @@ function renderCalendar() {
     const period = getAccountingPeriod(currentDate);
     const todayStr = formatDate(new Date());
     const selectedDateStr = formatDate(selectedDate);
+
+    // --- NUEVO: Cargar estadísticas extra para los días del calendario ---
+    extraStatsMap = {};
+    try {
+        const dbDrogas = new Dexie("appDrogasDB");
+        dbDrogas.version(1).stores({ registros: '++id, fecha, dni, resultado, nombre, matricula, agente' });
+        const dbDetenidos = new Dexie("DetenidosDB");
+        dbDetenidos.version(2).stores({ detenidos: '++id, userId, fecha, dniNie, matricula, nombreApellidosDetenido' });
+
+        const startT = period.start.getTime();
+        const endT = period.end.getTime() + 86399999;
+
+        const [allD, allDet] = await Promise.all([
+            dbDrogas.registros.where('agente').equals(activeUserId).toArray(),
+            dbDetenidos.detenidos.where('userId').equals(activeUserId).toArray()
+        ]);
+
+        allD.forEach(r => {
+            if (!r.fecha) return;
+            const [y, m, d] = r.fecha.split('-').map(Number);
+            const dStr = `${String(d).padStart(2,'0')}-${String(m).padStart(2,'0')}-${y}`;
+            if (!extraStatsMap[dStr]) extraStatsMap[dStr] = { pos: 0, neg: 0, det: 0 };
+            if (r.resultado === 'POSITIVO') extraStatsMap[dStr].pos++;
+            else if (r.resultado === 'NEGATIVO') extraStatsMap[dStr].neg++;
+        });
+
+        allDet.forEach(r => {
+            if (!r.fecha || r.fecha < startT || r.fecha > endT) return;
+            const dObj = new Date(r.fecha);
+            const dStr = formatDate(dObj);
+            if (!extraStatsMap[dStr]) extraStatsMap[dStr] = { pos: 0, neg: 0, det: 0 };
+            extraStatsMap[dStr].det++;
+        });
+    } catch (e) { console.warn("Error cargando extraStats para calendario", e); }
 
     let iterDate = new Date(period.start);
     iterDate.setHours(0, 0, 0, 0);
@@ -1102,13 +1137,21 @@ function createDayCell(grid, dayNumber, dateStr, isCurrentMonth, todayStr, selec
         dayDiv.classList.add('has-service');
         dayDiv.classList.add(getServiceClass(s.servicio));
 
-        // Mostrar número de denuncias si existen
+        // Contenedor para los badges a la derecha
+        const badgesContainer = document.createElement('div');
+        badgesContainer.style.position = 'absolute';
+        badgesContainer.style.top = '2px';
+        badgesContainer.style.right = '2px';
+        badgesContainer.style.display = 'flex';
+        badgesContainer.style.flexDirection = 'column';
+        badgesContainer.style.gap = '1px';
+        badgesContainer.style.alignItems = 'flex-end';
+        dayDiv.appendChild(badgesContainer);
+
+        // Badge Denuncias (Amarillo)
         if (s.denuncias > 0) {
             const denBadge = document.createElement('span');
             denBadge.innerText = s.denuncias;
-            denBadge.style.position = 'absolute';
-            denBadge.style.top = '2px';
-            denBadge.style.right = '2px';
             denBadge.style.background = '#ffeb3b';
             denBadge.style.color = '#000';
             denBadge.style.fontSize = '8px';
@@ -1116,7 +1159,52 @@ function createDayCell(grid, dayNumber, dateStr, isCurrentMonth, todayStr, selec
             denBadge.style.padding = '0 3px';
             denBadge.style.borderRadius = '4px';
             denBadge.style.border = '1px solid #000';
-            dayDiv.appendChild(denBadge);
+            denBadge.style.lineHeight = '1.2';
+            badgesContainer.appendChild(denBadge);
+        }
+
+        // --- Nuevos Badges: Detenidos, Positivos, Negativos ---
+        const stats = extraStatsMap[dateStr];
+        if (stats) {
+            // Detenidos (Azul)
+            if (stats.det > 0) {
+                const badge = document.createElement('span');
+                badge.innerText = stats.det;
+                badge.style.background = '#1a237e';
+                badge.style.color = 'white';
+                badge.style.fontSize = '8px';
+                badge.style.fontWeight = 'bold';
+                badge.style.padding = '0 3px';
+                badge.style.borderRadius = '4px';
+                badge.style.lineHeight = '1.2';
+                badgesContainer.appendChild(badge);
+            }
+            // Positivos Drogas (Rojo)
+            if (stats.pos > 0) {
+                const badge = document.createElement('span');
+                badge.innerText = stats.pos;
+                badge.style.background = '#c62828';
+                badge.style.color = 'white';
+                badge.style.fontSize = '8px';
+                badge.style.fontWeight = 'bold';
+                badge.style.padding = '0 3px';
+                badge.style.borderRadius = '4px';
+                badge.style.lineHeight = '1.2';
+                badgesContainer.appendChild(badge);
+            }
+            // Negativos Drogas (Verde)
+            if (stats.neg > 0) {
+                const badge = document.createElement('span');
+                badge.innerText = stats.neg;
+                badge.style.background = '#2e7d32';
+                badge.style.color = 'white';
+                badge.style.fontSize = '8px';
+                badge.style.fontWeight = 'bold';
+                badge.style.padding = '0 3px';
+                badge.style.borderRadius = '4px';
+                badge.style.lineHeight = '1.2';
+                badgesContainer.appendChild(badge);
+            }
         }
 
         // Obtener iniciales: personalizada para DESCANSO SINGULARIZADO o genérica
