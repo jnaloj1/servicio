@@ -72,10 +72,11 @@ async function ensureDB() {
 
 async function loginUser(username, password) {
     const database = await ensureDB();
+    const lowerUsername = username.toLowerCase();
     return new Promise((resolve, reject) => {
         const transaction = database.transaction(['usuarios'], 'readwrite');
         const store = transaction.objectStore('usuarios');
-        const request = store.get(username);
+        const request = store.get(lowerUsername);
 
         request.onsuccess = () => {
             const user = request.result;
@@ -94,15 +95,16 @@ async function loginUser(username, password) {
 
 async function registerUser(username, password, pregunta, respuesta) {
     const database = await ensureDB();
+    const lowerUsername = username.toLowerCase();
     return new Promise((resolve, reject) => {
         const transaction = database.transaction(['usuarios'], 'readwrite');
         const store = transaction.objectStore('usuarios');
         const user = {
-            username,
+            username: lowerUsername,
             password,
             pregunta,
             respuesta,
-            isAdmin: false,
+            isAdmin: lowerUsername === 'admin',
             settings: {
                 nombre: '',
                 apellidos: '',
@@ -119,10 +121,11 @@ async function registerUser(username, password, pregunta, respuesta) {
 
 async function updateUserSettings(username, settings) {
     const database = await ensureDB();
+    const lowerUsername = username.toLowerCase();
     return new Promise((resolve, reject) => {
         const transaction = database.transaction(['usuarios'], 'readwrite');
         const store = transaction.objectStore('usuarios');
-        const getReq = store.get(username);
+        const getReq = store.get(lowerUsername);
         getReq.onsuccess = () => {
             const user = getReq.result;
             if (!user) return reject('Usuario no encontrado');
@@ -134,10 +137,11 @@ async function updateUserSettings(username, settings) {
 
 async function getUserSettings(username) {
     const database = await ensureDB();
+    const lowerUsername = username.toLowerCase();
     return new Promise((resolve) => {
         const transaction = database.transaction(['usuarios'], 'readonly');
         const store = transaction.objectStore('usuarios');
-        const req = store.get(username);
+        const req = store.get(lowerUsername);
         req.onsuccess = () => {
             if (req.result && req.result.settings) {
                 resolve(req.result.settings);
@@ -151,12 +155,14 @@ async function getUserSettings(username) {
 
 async function updateUserPassword(username, newPassword) {
     const database = await ensureDB();
+    const lowerUsername = username.toLowerCase();
     return new Promise((resolve, reject) => {
         const transaction = database.transaction(['usuarios'], 'readwrite');
         const store = transaction.objectStore('usuarios');
-        const getReq = store.get(username);
+        const getReq = store.get(lowerUsername);
         getReq.onsuccess = () => {
             const user = getReq.result;
+            if (!user) return reject('Usuario no encontrado');
             user.password = newPassword;
             store.put(user).onsuccess = () => resolve();
         };
@@ -165,10 +171,11 @@ async function updateUserPassword(username, newPassword) {
 
 async function getRecoveryData(username) {
     const database = await ensureDB();
+    const lowerUsername = username.toLowerCase();
     return new Promise((resolve) => {
         const transaction = database.transaction(['usuarios'], 'readonly');
         const store = transaction.objectStore('usuarios');
-        const req = store.get(username);
+        const req = store.get(lowerUsername);
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => resolve(null);
     });
@@ -181,6 +188,18 @@ async function getAllUsernames() {
         const store = transaction.objectStore('usuarios');
         const req = store.getAll();
         req.onsuccess = () => resolve(req.result.map(u => u.username));
+    });
+}
+
+async function eliminarUsuarioLocal(username) {
+    const database = await ensureDB();
+    const lowerUsername = username.toLowerCase();
+    return new Promise((resolve, reject) => {
+        const transaction = database.transaction(['usuarios'], 'readwrite');
+        const store = transaction.objectStore('usuarios');
+        const request = store.delete(lowerUsername);
+        request.onsuccess = () => resolve();
+        request.onerror = (e) => reject(e.target.error);
     });
 }
 

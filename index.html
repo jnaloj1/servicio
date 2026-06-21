@@ -122,18 +122,18 @@
         </div>
 
         <a href="appservicio_pwa/index.html" class="btn-primary btn-hub" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
-            <i class="material-icons">directions_car</i>
-            <span style="margin-left: 10px;">Control Kilómetros</span>
+            <i class="material-icons">calendar_month</i>
+            <span style="margin-left: 10px;">Calendario Servicio</span>
         </a>
 
-        <a href="rado-detenidos/index.html" class="btn-primary btn-hub" style="background-color: #2e7d32; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+        <a href="radio-detenidos/index.html" class="btn-primary btn-hub" style="background-color: #2e7d32; text-decoration: none; display: flex; align-items: center; justify-content: center;">
             <i class="material-icons">radio</i>
             <span style="margin-left: 10px;">Radio Detenidos</span>
         </a>
 
         <a href="appDrogas/index.html" class="btn-primary btn-hub" style="background-color: #1e3a8a; text-decoration: none; display: flex; align-items: center; justify-content: center;">
             <i class="material-icons">medication</i>
-            <span style="margin-left: 10px;">App Drogas</span>
+            <span style="margin-left: 10px;">Control Drogas</span>
         </a>
 
         <div class="logout-link" id="btnLogout">
@@ -175,7 +175,9 @@
         function showHub(user) {
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('hubContainer').style.display = 'flex';
-            document.getElementById('welcomeText').innerText = 'Hola, ' + user.username;
+            // Mostrar en Mayúsculas excepto admin
+            const displayName = user.username === 'admin' ? 'admin' : user.username.toUpperCase();
+            document.getElementById('welcomeText').innerText = 'Hola, ' + displayName;
         }
 
         function setupLoginEvents() {
@@ -183,7 +185,8 @@
             const btnLogout = document.getElementById('btnLogout');
 
             btnLogin.onclick = async () => {
-                const user = document.getElementById('loginUser').value.trim();
+                const userRaw = document.getElementById('loginUser').value.trim();
+                const user = userRaw.toLowerCase();
                 const pass = document.getElementById('loginPass').value;
                 if (!user || !pass) return alert("Introduce usuario y contraseña");
 
@@ -191,9 +194,11 @@
                     const result = await loginUser(user, pass);
                     console.log('Resultado login portal:', result);
                     if (result.status === 'success') {
-                        console.log('Guardando sesión para:', result.user.username);
-                        sessionStorage.setItem('loggedUser', JSON.stringify(result.user));
-                        showHub(result.user);
+                        const userObj = result.user;
+                        userObj.username = userObj.username.toLowerCase();
+                        console.log('Guardando sesión para:', userObj.username);
+                        sessionStorage.setItem('loggedUser', JSON.stringify(userObj));
+                        showHub(userObj);
                         location.reload(); // Recargar para asegurar que todo el sistema ve la sesión
                     } else if (result.status === 'new_user') {
                         document.getElementById('loginFormSection').style.display = 'none';

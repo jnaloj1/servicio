@@ -29,13 +29,29 @@ if (!currentUser) {
 
 let editId = null;
 
-// Inicialización de Materialize con Callbacks para Firma
+// Inicialización de Materialize
 document.addEventListener('DOMContentLoaded', async function() {
-    M.AutoInit();
+    // Inicializar componentes necesarios manualmente
+    M.Dropdown.init(document.querySelectorAll('.dropdown-trigger'), { coverTrigger: false, constrainWidth: false });
+
+    var collapsibleElems = document.querySelectorAll('.collapsible');
+    M.Collapsible.init(collapsibleElems, {
+        accordion: true,
+        onOpenEnd: function(el) {
+            if (el.querySelector('#signature-pad')) {
+                resizeCanvas();
+            }
+        }
+    });
+
+    initSignaturePad();
+    setupInstallButton();
 
     // Configurar nombre de usuario y logout
     const displayUser = document.getElementById('display-username');
-    if (displayUser) displayUser.innerText = currentUser;
+    if (displayUser) {
+        displayUser.innerText = currentUser === 'admin' ? 'admin' : currentUser.toUpperCase();
+    }
 
     const btnLogout = document.getElementById('btn-logout');
     if (btnLogout) {
@@ -43,25 +59,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             e.preventDefault();
             sessionStorage.removeItem('currentUser');
             sessionStorage.removeItem('loggedUser');
-            location.href = '/'; // Volver al portal
+            location.href = '/';
         };
     }
-
-    // Inicializar dropdown de Materialize
-    var dropdownElems = document.querySelectorAll('.dropdown-trigger');
-    M.Dropdown.init(dropdownElems, { coverTrigger: false, constrainWidth: false });
-
-    var elems = document.querySelectorAll('.collapsible.expandable');
-    M.Collapsible.init(elems, {
-        accordion: false,
-        onOpenEnd: function(el) {
-            if (el.querySelector('#signature-pad')) {
-                resizeCanvas();
-            }
-        }
-    });
-    initSignaturePad();
-    setupInstallButton();
 
     // Si el evento se disparó antes de que cargara el DOM, aseguramos visibilidad aquí
     if (deferredPrompt) {
@@ -196,10 +196,6 @@ function resizeCanvas() {
     canvas.width = canvas.offsetWidth * ratio;
     canvas.height = canvas.offsetHeight * ratio;
     canvas.getContext("2d").scale(ratio, ratio);
-
-    if (signaturePad) {
-        signaturePad.clear(); // Opcional: limpiar al redimensionar para evitar artefactos
-    }
 }
 
 function initSignaturePad() {

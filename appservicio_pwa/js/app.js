@@ -49,7 +49,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log("Sesión detectada:", loggedUser);
 
         if (loggedUser) {
-            startApp(JSON.parse(loggedUser));
+            const user = JSON.parse(loggedUser);
+            if (user && user.username) user.username = user.username.toLowerCase();
+            startApp(user);
         } else {
             console.warn("Sesión no encontrada en sessionStorage. Redirigiendo al portal raíz.");
             window.location.href = '/index.html';
@@ -86,7 +88,9 @@ function setupLoginEventListeners() {
                     });
 
                     if (response.ok) {
-                        alert(`Usuario ${userToDelete} eliminado con éxito.`);
+                        // También eliminar localmente
+                        await eliminarUsuarioLocal(userToDelete);
+                        alert(`Usuario ${userToDelete} eliminado con éxito de la nube y del dispositivo.`);
                         location.reload();
                     } else {
                         const err = await response.json().catch(() => ({}));
@@ -111,25 +115,49 @@ async function startApp(user) {
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('mainHeader').style.display = 'block';
     document.getElementById('appContent').style.display = 'flex';
-    document.getElementById('headerTitle').innerText = `Hola, ${user.username}`;
+    const displayName = user.username === 'admin' ? 'admin' : user.username.toUpperCase();
+    document.getElementById('headerTitle').innerText = `Hola, ${displayName}`;
 
     if (user.isAdmin) {
         document.getElementById('adminPanel').style.display = 'block';
-        const allUsers = await getAllUsernames();
-        const select = document.getElementById('adminUserSelect');
-        select.innerHTML = allUsers.map(u => `<option value="${u}" ${u === user.username ? 'selected' : ''}>${u}</option>`).join('');
+
+        // Obtener lista de usuarios de la nube para el administrador
+        try {
+            const response = await fetch(`/.netlify/functions/sync?userId=${user.username}&listAll=true`);
+            if (response.ok) {
+                const cloudUsers = await response.json();
+                const select = document.getElementById('adminUserSelect');
+                select.innerHTML = cloudUsers.map(u => {
+                    const dName = u === 'admin' ? 'admin' : u.toUpperCase();
+                    return `<option value="${u}" ${u === user.username ? 'selected' : ''}>${dName}</option>`;
+                }).join('');
+            } else {
+                // Fallback a local si falla la nube
+                const allUsers = await getAllUsernames();
+                const select = document.getElementById('adminUserSelect');
+                select.innerHTML = allUsers.map(u => {
+                    const dName = u === 'admin' ? 'admin' : u.toUpperCase();
+                    return `<option value="${u}" ${u === user.username ? 'selected' : ''}>${dName}</option>`;
+                }).join('');
+            }
+        } catch (e) {
+            console.warn("No se pudo cargar la lista de usuarios de la nube", e);
+        }
     }
 
     await refreshAppData(activeUserId);
     fillSettingsForm();
 
-    // --- Sincronización Automática al Iniciar Sesión ---
+    // --- Sincronización Automática Controlada ---
     if (navigator.onLine) {
-        console.log("Iniciando auto-sync...");
-        // 1. Intentar descargar datos (solo si local está vacío o para forzar actualización silenciosa)
-        await syncFromServer(false);
-        // 2. Subir datos actuales a la nube
-        await syncToServer();
+        setTimeout(async () => {
+            console.log("Iniciando descarga silenciosa...");
+            await syncFromServer(false);
+            setTimeout(() => {
+                console.log("Iniciando subida inicial...");
+                syncToServer();
+            }, 1000);
+        }, 500);
     }
 }
 async function refreshAppData(userId) {
